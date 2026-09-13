@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NYCU 預排課程匯入",
-  "version": "0.1.0",
-  "description": "貼上課號，一鍵加入陽明交大選課系統的預排課程。",
+  "version": "0.2.0",
+  "description": "搜尋課名、老師或課號，一鍵加入陽明交大選課系統的預排課程。",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -12,8 +12,12 @@
     "default_popup": "src/popup.html",
     "default_title": "NYCU 預排課程匯入"
   },
-  "permissions": ["activeTab"],
-  "host_permissions": ["https://cos.nycu.edu.tw/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://cos.nycu.edu.tw/*", "https://timetable.nycu.edu.tw/*"],
   "content_scripts": [
     {
       "matches": ["https://cos.nycu.edu.tw/*"],
