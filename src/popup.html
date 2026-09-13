@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>NYCU 預排課程匯入</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>NYCU 預排課程匯入</h1>
+
+  <section id="view-open" hidden>
+    <p>請先開啟陽明交大選課系統的預排課程頁面。</p>
+    <button id="btn-open" type="button">開啟選課網</button>
+  </section>
+
+  <section id="view-import" hidden>
+    <label for="ids">課號（用逗號、空白或換行分隔）</label>
+    <textarea id="ids" rows="5" placeholder="例如：516702, 516703&#10;也接受 1151_516702"></textarea>
+    <button id="btn-import" type="button">加入預排</button>
+    <p id="hint" class="hint" hidden></p>
+    <div id="results" hidden>
+      <div class="group" id="group-added" hidden><h2>成功加入</h2><ul></ul></div>
+      <div class="group" id="group-exists" hidden><h2>原本就在預排</h2><ul></ul></div>
+      <div class="group group-error" id="group-error" hidden><h2>失敗</h2><ul></ul></div>
+      <div class="group" id="group-invalid" hidden><h2>看不懂的輸入</h2><ul></ul></div>
+    </div>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

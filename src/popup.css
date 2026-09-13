@@ -1,0 +1,29 @@
+:root { color-scheme: light dark; }
+body {
+  width: 320px;
+  margin: 0;
+  padding: 12px 14px 14px;
+  font: 14px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+}
+h1 { font-size: 16px; margin: 0 0 10px; }
+h2 { font-size: 13px; margin: 10px 0 4px; }
+label { display: block; margin-bottom: 4px; }
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 6px;
+  resize: vertical;
+}
+button {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled { cursor: default; opacity: .6; }
+.hint { margin: 8px 0 0; }
+.hint.error { color: #c62828; }
+ul { margin: 0; padding-left: 18px; }
+li code { font-family: ui-monospace, Menlo, monospace; }
+.group-error li { color: #c62828; }
