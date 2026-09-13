@@ -164,7 +164,8 @@ function courseRow(course) {
   const meta = document.createElement('div')
   meta.className = 'meta'
   const credit = course.credit ? `${Number(course.credit)} 學分` : ''
-  meta.textContent = [course.teacher, course.time, credit, course.dep].filter(Boolean).join(' · ')
+  const time = course.time.replace(/-(?=,|$)/g, '')
+  meta.textContent = [course.teacher, time, credit, course.dep].filter(Boolean).join(' · ')
   meta.title = meta.textContent
   info.append(title, meta)
 
