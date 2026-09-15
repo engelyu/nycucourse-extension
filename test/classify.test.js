@@ -53,3 +53,46 @@ test('沒給狀態碼或 2xx 時照原本規則分類', () => {
 test('classify.js 是一般腳本，不用 export 也能掛到 globalThis', () => {
   assert.equal(typeof globalThis.NycuClassify.tokenUsable, 'function')
 })
+
+const { runBatch } = globalThis.NycuClassify
+
+test('runBatch 全部成功並以預排清單確認', async () => {
+  const added = new Set()
+  const addOne = async (id) => { added.add(id); return classifyResult(id, '') }
+  const r = await runBatch(['516701', '516702'], addOne, async () => [...added])
+  assert.deepEqual(r, {
+    ok: true,
+    results: [
+      { id: '516701', status: 'added', msg: '' },
+      { id: '516702', status: 'added', msg: '' },
+    ],
+  })
+})
+
+test('runBatch 中途網路錯誤：保留前面結果，後面標示未送出', async () => {
+  const added = new Set()
+  const addOne = async (id) => {
+    if (id === '516702') throw new Error('Failed to fetch')
+    added.add(id)
+    return classifyResult(id, '')
+  }
+  const r = await runBatch(['516701', '516702', '516703'], addOne, async () => [...added])
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.results, [
+    { id: '516701', status: 'added', msg: '' },
+    { id: '516702', status: 'error', msg: '網路錯誤：Failed to fetch' },
+    { id: '516703', status: 'error', msg: '未送出：前一門發生網路錯誤' },
+  ])
+})
+
+test('runBatch 無法讀取預排清單：已送出的課標示無法確認並附警告', async () => {
+  const r = await runBatch(['516701'], async (id) => classifyResult(id, ''), async () => { throw new Error('Failed to fetch') })
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.results, [{ id: '516701', status: 'added', msg: '已送出，但無法確認是否加入' }])
+  assert.equal(r.warning, '無法確認加入結果：Failed to fetch')
+})
+
+test('runBatch 預排清單回 null 代表登入失效', async () => {
+  const r = await runBatch(['516701'], async (id) => classifyResult(id, ''), async () => null)
+  assert.deepEqual(r, { ok: false, reason: 'not_logged_in' })
+})

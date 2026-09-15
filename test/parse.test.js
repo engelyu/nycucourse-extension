@@ -30,3 +30,19 @@ test('findInvalidTokens 回傳不合格式的原始字串', () => {
 test('findInvalidTokens 去重', () => {
   assert.deepEqual(findInvalidTokens('abc abc'), ['abc'])
 })
+
+import { semesterOfIds } from '../src/lib/parse.js'
+
+test('semesterOfIds 取出一致的學期前綴', () => {
+  assert.deepEqual(semesterOfIds('1151_516702 1151_516703'), { semester: '1151', mixed: false })
+  assert.deepEqual(semesterOfIds('516702 1151_516703'), { semester: '1151', mixed: false })
+  assert.deepEqual(semesterOfIds('516702 abc'), { semester: null, mixed: false })
+})
+
+test('semesterOfIds 前綴學期不一致時標示 mixed', () => {
+  assert.deepEqual(semesterOfIds('1151_516702 1152_516703'), { semester: null, mixed: true })
+})
+
+test('semesterOfIds 忽略不是課號的字串', () => {
+  assert.deepEqual(semesterOfIds('1152_abc 1151_516702'), { semester: '1151', mixed: false })
+})

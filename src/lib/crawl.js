@@ -51,17 +51,24 @@ export async function crawlSemester({
   const post = (fn, params) => fetchJson(fn, { method: 'POST', body: formBody(params) })
   const get = (fn) => fetchJson(fn, { method: 'GET' })
 
-  onProgress({ phase: 'tree', done: 0, total: 0 })
+  const depUids = []
+  const seenDeps = new Set()
+  // 讀系所清單時每個請求後都回報，背景程式才會持續更新狀態，不會被判定為中斷
+  const treeTick = () => onProgress({ phase: 'tree', done: depUids.length, total: 0 })
+
+  treeTick()
   const semester = pickSemester(await get('get_acysem'))
+  treeTick()
   const base = { flang: 'zh-tw', acysem: semester, acysemend: semester }
 
   const types = await get('get_type')
-  const depUids = []
-  const seenDeps = new Set()
+  treeTick()
   for (const type of Array.isArray(types) ? types : []) {
     const categories = objectKeys(await post('get_category', { ftype: type.uid, ...base }))
+    treeTick()
     for (const fcategory of categories) {
       const colleges = objectKeys(await post('get_college', { ftype: type.uid, ...base, fcategory }))
+      treeTick()
       for (const fcollege of colleges.length ? colleges : ['*']) {
         const deps = objectKeys(await post('get_dep', { ftype: type.uid, ...base, fcategory, fcollege }))
         for (const uid of deps) {
@@ -69,10 +76,13 @@ export async function crawlSemester({
           seenDeps.add(uid)
           depUids.push(uid)
         }
-        // 每查完一個學院就回報，讓背景程式持續更新狀態，不會被判定為中斷
-        onProgress({ phase: 'tree', done: depUids.length, total: 0 })
+        treeTick()
       }
     }
+  }
+  // 伺服器回空內容或 API 改版時會一路拿到空清單；當成失敗，才不會用空資料覆蓋舊資料
+  if (depUids.length === 0) {
+    throw new Error('找不到任何系所，課程時間表可能暫時無法使用或已改版')
   }
 
   const courses = new Map()
@@ -87,6 +97,9 @@ export async function crawlSemester({
     done++
     onProgress({ phase: 'courses', done, total: depUids.length })
   })
+  if (courses.size === 0) {
+    throw new Error('沒有抓到任何課程，課程時間表可能暫時無法使用或已改版')
+  }
 
   return { semester, courses: [...courses.values()] }
 }

@@ -14,6 +14,18 @@
     <span id="data-status">尚未下載課程資料</span>
     <button id="btn-crawl" type="button">更新課程資料</button>
   </section>
+  <section id="crawl-progress" class="crawl-progress" role="status" aria-live="polite" hidden>
+    <div class="crawl-row">
+      <span id="crawl-title" class="crawl-title"></span>
+      <span id="crawl-elapsed" class="crawl-elapsed"></span>
+    </div>
+    <div id="crawl-track" class="crawl-track"><div id="crawl-bar" class="crawl-bar"></div></div>
+    <div class="crawl-row">
+      <span id="crawl-detail"></span>
+      <span id="crawl-percent"></span>
+    </div>
+    <p id="crawl-hint" class="crawl-hint"></p>
+  </section>
   <p id="crawl-error" class="hint error" hidden></p>
 
   <section id="tab-bar" class="tab-bar" hidden>
@@ -21,6 +33,7 @@
     <button id="btn-open" type="button" hidden>開啟選課網</button>
     <button id="btn-reload" type="button" hidden>重新整理選課網</button>
   </section>
+  <p id="semester-warning" class="hint warn" role="alert" hidden></p>
 
   <section class="search">
     <input id="q" type="search" placeholder="課名、老師或課號" autocomplete="off" disabled>

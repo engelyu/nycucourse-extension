@@ -152,3 +152,28 @@ test('併發數不超過設定值', async () => {
   await crawlSemester({ fetchJson, concurrency: 2 })
   assert.equal(peak, 2)
 })
+
+test('找不到任何系所時丟錯，不回傳空課程', async () => {
+  const fetchJson = async (fn) => {
+    if (fn === 'get_acysem') return [{ T: '1151' }]
+    if (fn === 'get_type') return ''
+    return []
+  }
+  await assert.rejects(crawlSemester({ fetchJson, sleep: noSleep }), /找不到任何系所/)
+})
+
+test('所有系所都沒有課程時丟錯，不回傳空課程', async () => {
+  const { fetchJson: base } = fakeServer()
+  const fetchJson = async (fn, opts) => (fn === 'get_cos_list' ? [] : base(fn, opts))
+  await assert.rejects(crawlSemester({ fetchJson, sleep: noSleep }), /沒有抓到任何課程/)
+})
+
+test('讀取系所清單時每個請求後都回報進度', async () => {
+  const { fetchJson, calls } = fakeServer()
+  const events = []
+  await crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep, onProgress: (e) => events.push(e) })
+  const treeFns = ['get_acysem', 'get_type', 'get_category', 'get_college', 'get_dep']
+  const treeRequests = calls.filter((c) => treeFns.includes(c.fn)).length
+  const treeEvents = events.filter((e) => e.phase === 'tree').length
+  assert.ok(treeEvents >= treeRequests, `tree events ${treeEvents} < requests ${treeRequests}`)
+})

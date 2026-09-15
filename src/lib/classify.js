@@ -50,5 +50,36 @@
     return payload.exp * 1000 > nowMs + skewMs
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable })
+  const errorMessage = (err) => String(err && err.message ? err.message : err)
+
+  // 依序加入每門課，最後讀一次預排清單確認。
+  // 中途網路錯誤：保留前面已送出的結果，其餘標示未送出；清單讀不到時標示無法確認並附警告。
+  async function runBatch(ids, addOne, listIds) {
+    const results = []
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        results.push(await addOne(ids[i]))
+      } catch (err) {
+        results.push({ id: ids[i], status: 'error', msg: `網路錯誤：${errorMessage(err)}` })
+        for (const id of ids.slice(i + 1)) {
+          results.push({ id, status: 'error', msg: '未送出：前一門發生網路錯誤' })
+        }
+        break
+      }
+    }
+    let present
+    try {
+      present = await listIds()
+    } catch (err) {
+      return {
+        ok: true,
+        results: results.map((r) => (r.status === 'added' ? { ...r, msg: '已送出，但無法確認是否加入' } : r)),
+        warning: `無法確認加入結果：${errorMessage(err)}`,
+      }
+    }
+    if (present === null) return { ok: false, reason: 'not_logged_in' }
+    return { ok: true, results: confirmWithList(results, present) }
+  }
+
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch })
 })(globalThis)

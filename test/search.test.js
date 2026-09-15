@@ -35,8 +35,24 @@ test('課號完全相符排最前面', () => {
   assert.deepEqual(ids(searchCourses(courses, '100003')), ['100003'])
 })
 
-test('課號部分相符不算', () => {
-  assert.deepEqual(ids(searchCourses(courses, '10000')), [])
+test('三碼以上數字可搜尋課號片段', () => {
+  assert.deepEqual(ids(searchCourses(courses, '10000')), ['100001', '100002', '100003', '100004', '100005'])
+  const more = [c('516702', '甲'), c('516703', '乙'), c('100009', '516 導論')]
+  assert.deepEqual(ids(searchCourses(more, '5167')), ['516702', '516703'])
+})
+
+test('課號完全相符排在課號片段前面', () => {
+  const list = [c('151670', '含片段'), c('516702', '完全相符')]
+  assert.deepEqual(ids(searchCourses(list, '516702')), ['516702'])
+  assert.deepEqual(ids(searchCourses([c('516702', '甲'), c('151670', '乙')], '1670')), ['516702', '151670'])
+})
+
+test('一兩碼數字不做課號片段比對', () => {
+  assert.deepEqual(ids(searchCourses(courses, '10')), [])
+})
+
+test('搜尋接受 1151_100003 這種帶學期前綴的課號', () => {
+  assert.deepEqual(ids(searchCourses(courses, '1151_100003')), ['100003'])
 })
 
 test('課名模糊子序列', () => {
