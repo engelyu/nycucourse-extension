@@ -20,7 +20,7 @@
 | 說明 | 複製 `store/description.md` 的「詳細說明」段落 |
 | 類別 | 生產力（Productivity）→ 若有「教育」子類可選教育 |
 | 語言 | 中文（繁體） |
-| 商店圖示 | `icons/icon128.png` |
+| 商店圖示 | `store/images/store-icon-128.png`（96×96 圖案加 16px 透明邊，符合商店圖示規範） |
 | 螢幕截圖 | `store/images/screenshot-1.png`、`screenshot-2.png`、`screenshot-3.png`（1280×800） |
 | 小型宣傳圖塊 | `store/images/promo-small-440x280.png` |
 | 官方網址 | `https://github.com/engelyu/nycucourse-extension` |
