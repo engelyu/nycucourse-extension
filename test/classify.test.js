@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { classifyResult, confirmWithList } from '../src/lib/classify.js'
+import '../src/lib/classify.js'
+
+const { classifyResult, confirmWithList } = globalThis.NycuClassify
 
 test('空回應代表成功加入', () => {
   assert.deepEqual(classifyResult('516702', ''), { id: '516702', status: 'added', msg: '' })
@@ -35,4 +37,19 @@ test('confirmWithList 把未出現在清單的 added 改成 error', () => {
     { id: '999999', status: 'error', msg: '選課預選失敗' },
   ])
   assert.equal(results[1].status, 'added')
+})
+
+test('HTTP 非 2xx 一律視為失敗並附狀態碼，即使回應是空字串', () => {
+  assert.deepEqual(classifyResult('516702', '', 503), { id: '516702', status: 'error', msg: '選課網錯誤（HTTP 503）' })
+  assert.deepEqual(classifyResult('516702', '<html>blocked</html>', 403), { id: '516702', status: 'error', msg: '選課網錯誤（HTTP 403）' })
+})
+
+test('沒給狀態碼或 2xx 時照原本規則分類', () => {
+  assert.equal(classifyResult('516702', '').status, 'added')
+  assert.equal(classifyResult('516702', '', 200).status, 'added')
+  assert.equal(classifyResult('563018', JSON.stringify([{ status: 'error', msg: '重複預選' }]), 200).status, 'exists')
+})
+
+test('classify.js 是一般腳本，不用 export 也能掛到 globalThis', () => {
+  assert.equal(typeof globalThis.NycuClassify.tokenUsable, 'function')
 })

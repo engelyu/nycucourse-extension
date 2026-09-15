@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NYCU 預排課程匯入",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "搜尋課名、老師或課號，一鍵加入陽明交大選課系統的預排課程。",
   "icons": {
     "16": "icons/icon16.png",
@@ -21,14 +21,8 @@
   "content_scripts": [
     {
       "matches": ["https://cos.nycu.edu.tw/*"],
-      "js": ["src/content.js"],
+      "js": ["src/lib/classify.js", "src/content.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/lib/classify.js"],
-      "matches": ["https://cos.nycu.edu.tw/*"]
     }
   ]
 }

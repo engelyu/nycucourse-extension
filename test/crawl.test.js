@@ -81,16 +81,61 @@ test('回報進度，最後一次 done 等於 total', async () => {
   assert.equal(last.done, 3)
 })
 
+const noSleep = async () => {}
+
 test('單一系所失敗會重試', async () => {
   const { fetchJson, calls } = fakeServer({ failDep: 'DEP-B', failTimes: 2 })
-  const r = await crawlSemester({ fetchJson, concurrency: 1 })
+  const r = await crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep })
   assert.equal(r.courses.length, 3)
   assert.equal(calls.filter((c) => c.fn === 'get_cos_list' && c.p.m_dep_uid === 'DEP-B').length, 3)
 })
 
+test('重試之間逐次拉長等待時間', async () => {
+  const { fetchJson } = fakeServer({ failDep: 'DEP-B', failTimes: 2 })
+  const delays = []
+  await crawlSemester({ fetchJson, concurrency: 1, retryDelayMs: 500, sleep: async (ms) => { delays.push(ms) } })
+  assert.deepEqual(delays, [500, 1000])
+})
+
+test('第一次就成功時不等待', async () => {
+  const { fetchJson } = fakeServer()
+  const delays = []
+  await crawlSemester({ fetchJson, concurrency: 2, sleep: async (ms) => { delays.push(ms) } })
+  assert.deepEqual(delays, [])
+})
+
 test('重試用完仍失敗則整體 reject', async () => {
   const { fetchJson } = fakeServer({ failDep: 'DEP-B', failTimes: 99 })
-  await assert.rejects(crawlSemester({ fetchJson, concurrency: 1 }), /DEP-B/)
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep }), /DEP-B/)
+})
+
+// DEP-A 立刻徹底失敗；DEP-B 由第二個 worker 處理但很慢，失敗發生時它還在跑
+function slowBServer() {
+  const server = fakeServer({ failDep: 'DEP-A', failTimes: 99 })
+  const fetchJson = async (fn, opts) => {
+    if (fn === 'get_cos_list' && new URLSearchParams(opts.body).get('m_dep_uid') === 'DEP-B') {
+      await new Promise((r) => setTimeout(r, 30))
+    }
+    return server.fetchJson(fn, opts)
+  }
+  return { fetchJson, calls: server.calls }
+}
+
+test('一個系所徹底失敗後，其他 worker 不再抓新的系所', async () => {
+  const { fetchJson, calls } = slowBServer()
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep }), /DEP-A/)
+  await new Promise((r) => setTimeout(r, 60))
+  const byDep = (uid) => calls.filter((c) => c.fn === 'get_cos_list' && c.p.m_dep_uid === uid).length
+  assert.equal(byDep('DEP-B'), 1)
+  assert.equal(byDep('DEP-C'), 0)
+})
+
+test('失敗後，還在跑的 worker 完成時不再回報課程進度', async () => {
+  const { fetchJson } = slowBServer()
+  const events = []
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep, onProgress: (e) => events.push(e) }))
+  await new Promise((r) => setTimeout(r, 60))
+  assert.equal(events.filter((e) => e.phase === 'courses' && e.done > 0).length, 0)
 })
 
 test('併發數不超過設定值', async () => {

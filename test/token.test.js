@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { tokenUsable } from '../src/lib/classify.js'
+import '../src/lib/classify.js'
+
+const { tokenUsable } = globalThis.NycuClassify
 
 const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 const jwt = (payload) => `${b64url({ typ: 'JWT', alg: 'HS256' })}.${b64url(payload)}.sig`
