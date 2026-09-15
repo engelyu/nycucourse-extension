@@ -26,7 +26,6 @@ NYCU 預排課程匯入
 協助使用者搜尋陽明交大課程並加入選課系統的預排課程。
 
 ## 權限說明（審核用）
-- activeTab：判斷目前分頁是否為選課系統，並與該分頁溝通。
 - storage：把公開課程資料存在本機供搜尋。
 - host_permissions cos.nycu.edu.tw：在選課系統頁面內注入腳本，呼叫該站自身的預排 API。
 - host_permissions timetable.nycu.edu.tw：下載學校公開的課程時間表資料。
