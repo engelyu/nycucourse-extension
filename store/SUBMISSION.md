@@ -23,8 +23,8 @@
 | 商店圖示 | `icons/icon128.png` |
 | 螢幕截圖 | `store/images/screenshot-1.png`、`screenshot-2.png`、`screenshot-3.png`（1280×800） |
 | 小型宣傳圖塊 | `store/images/promo-small-440x280.png` |
-| 官方網址 | 留空，或填 repo 網址 |
-| 支援網址 | repo 的 issues 頁（放上 GitHub 後） |
+| 官方網址 | `https://github.com/engelyu/nycucourse-extension` |
+| 支援網址 | `https://github.com/engelyu/nycucourse-extension/issues` |
 
 ## 3. 隱私權實務（Privacy practices）
 
@@ -57,14 +57,13 @@
 
 **隱私權政策網址**
 
-`store/privacy.md` 需要一個公開網址。最簡單的做法：
-
-1. 把 repo 推到 GitHub（公開）。
-2. 網址填 `https://github.com/<帳號>/nycucourse-extension/blob/master/store/privacy.md`。
+```
+https://github.com/engelyu/nycucourse-extension/blob/master/store/privacy.md
+```
 
 ## 4. 發布設定（Distribution）
 
-- 顯示設定：**公開**。選課快結束，想先小範圍收回饋可以選「不公開（Unlisted）」，只有拿到連結的人能安裝。
+- 顯示設定：**不公開（Unlisted）**。商店搜尋不到，拿到連結的人可以安裝。通過審查後把商店網址貼到群組。之後想讓大家搜得到，再改成公開，不用重新上傳。
 - 地區：全部地區。
 - 價格：免費。
 

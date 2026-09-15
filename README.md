@@ -2,6 +2,11 @@
 
 Chrome 擴充功能：搜尋課名、老師或課號，一鍵加入陽明交通大學選課系統（cos.nycu.edu.tw）的預排課程。
 
+- 隱私權政策：[store/privacy.md](store/privacy.md)
+- 問題回報與建議：[Issues](https://github.com/engelyu/nycucourse-extension/issues)
+
+本工具非學校官方工具。
+
 ## 開發
 
 ```bash
