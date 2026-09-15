@@ -49,9 +49,10 @@ export async function crawlSemester({ fetchJson, onProgress = () => {}, concurre
           seenDeps.add(uid)
           depUids.push(uid)
         }
+        // 每查完一個學院就回報，讓背景程式持續更新狀態，不會被判定為中斷
+        onProgress({ phase: 'tree', done: depUids.length, total: 0 })
       }
     }
-    onProgress({ phase: 'tree', done: depUids.length, total: 0 })
   }
 
   const courses = new Map()

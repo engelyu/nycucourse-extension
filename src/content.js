@@ -39,15 +39,17 @@ async function addOne(id) {
   })
 }
 
+// 回傳預排課號；登入失效時選課網回空字串，這時回傳 null。
 async function currentPreregistIds() {
   const text = await post('getpreregist', {})
+  if (!text.trim()) return null
   const list = JSON.parse(text)
   return Array.isArray(list) ? list.map((c) => String(c.cos_id)) : []
 }
 
 async function importIds(ids) {
-  if (!token()) return { ok: false, reason: 'not_logged_in' }
-  const { classifyResult, confirmWithList } = await lib()
+  const { classifyResult, confirmWithList, tokenUsable } = await lib()
+  if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
   const results = []
   try {
     for (const id of ids) {
@@ -55,6 +57,7 @@ async function importIds(ids) {
       results.push(classifyResult(id, text))
     }
     const present = await currentPreregistIds()
+    if (present === null) return { ok: false, reason: 'not_logged_in' }
     return { ok: true, results: confirmWithList(results, present) }
   } catch (err) {
     return { ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }

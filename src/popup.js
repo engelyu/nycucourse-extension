@@ -1,9 +1,9 @@
 import { parseIds, findInvalidTokens } from './lib/parse.js'
 import { searchCourses } from './lib/search.js'
+import { isCrawlAlive } from './lib/crawlState.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
-const STALE_MS = 5 * 60 * 1000
 
 const $ = (sel) => document.querySelector(sel)
 
@@ -85,7 +85,7 @@ function renderData(courseData, crawlState) {
   const btn = $('#btn-crawl')
   const errEl = $('#crawl-error')
   const isRunning = Boolean(crawlState && crawlState.status === 'running')
-  const running = isRunning && Date.now() - crawlState.startedAt < STALE_MS
+  const running = isCrawlAlive(crawlState, Date.now())
 
   if (running) {
     btn.disabled = true
@@ -120,6 +120,8 @@ function renderData(courseData, crawlState) {
 
 async function loadData() {
   const { courseData, crawlState } = await chrome.storage.local.get(['courseData', 'crawlState'])
+  state.courseData = courseData
+  state.crawlState = crawlState
   renderData(courseData, crawlState)
 }
 
@@ -303,9 +305,15 @@ async function init() {
   $('#q').addEventListener('input', renderSearch)
   $('#btn-import').addEventListener('click', onBulkImport)
 
+  // 直接用事件帶來的新值，更新進度時不必重新讀取整份課程資料
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes.courseData || changes.crawlState)) loadData()
+    if (area !== 'local' || !(changes.courseData || changes.crawlState)) return
+    if (changes.courseData) state.courseData = changes.courseData.newValue
+    if (changes.crawlState) state.crawlState = changes.crawlState.newValue
+    renderData(state.courseData, state.crawlState)
   })
+  // 更新卡住時不會再有事件，定期重畫才能顯示「中斷」並解鎖按鈕
+  setInterval(() => renderData(state.courseData, state.crawlState), 5000)
 
   await Promise.all([detectTab(), loadData()])
   renderSearch()

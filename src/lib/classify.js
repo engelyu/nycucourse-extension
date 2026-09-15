@@ -23,3 +23,22 @@ export function confirmWithList(results, preregistIds) {
     return { ...r }
   })
 }
+
+// 選課網登入權杖是 JWT，有效 8 小時。已過期或一分鐘內過期視為不可用；
+// 解析不了就交給伺服器判斷。
+export function tokenUsable(token, nowMs, skewMs = 60_000) {
+  if (!token) return false
+  const part = String(token).split('.')[1]
+  if (!part) return true
+  let payload
+  try {
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/')
+    const bin = atob(b64 + '==='.slice((b64.length + 3) % 4))
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+    payload = JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    return true
+  }
+  if (!payload || typeof payload.exp !== 'number') return true
+  return payload.exp * 1000 > nowMs + skewMs
+}
