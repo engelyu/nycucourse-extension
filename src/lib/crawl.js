@@ -53,6 +53,8 @@ export async function crawlSemester({
 
   const depUids = []
   const seenDeps = new Set()
+  // 記下每個系所的查詢條件，之後要向選課網查人數時用得到
+  const depMenus = new Map()
   // 讀系所清單時每個請求後都回報，背景程式才會持續更新狀態，不會被判定為中斷
   const treeTick = () => onProgress({ phase: 'tree', done: depUids.length, total: 0 })
 
@@ -75,6 +77,7 @@ export async function crawlSemester({
           if (seenDeps.has(uid)) continue
           seenDeps.add(uid)
           depUids.push(uid)
+          depMenus.set(uid, { type: String(type.type ?? ''), dep_category: fcategory, college_no: fcollege, dep_uid: uid })
         }
         treeTick()
       }
@@ -91,7 +94,7 @@ export async function crawlSemester({
   await pool(depUids, concurrency, async (uid, isStopped) => {
     const json = await withRetry(() => post('get_cos_list', cosListParams(semester, uid)), uid, { retryDelayMs, sleep, isStopped })
     if (isStopped()) return
-    for (const course of parseCosList(json)) {
+    for (const course of parseCosList(json, depMenus.get(uid))) {
       if (course.id && !courses.has(course.id)) courses.set(course.id, course)
     }
     done++

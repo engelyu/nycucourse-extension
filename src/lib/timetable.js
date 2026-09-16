@@ -45,7 +45,8 @@ export function objectKeys(value) {
 
 const str = (v) => (v == null ? '' : String(v))
 
-export function parseCosList(json) {
+// menu：這批課程是從哪個系所查到的，之後要向選課網查已選人數時需要。
+export function parseCosList(json, menu) {
   const out = []
   for (const depKey of objectKeys(json)) {
     const dep = json[depKey]
@@ -54,7 +55,7 @@ export function parseCosList(json) {
       const group = dep[k]
       for (const key of objectKeys(group)) {
         const c = group[key] || {}
-        out.push({
+        const course = {
           id: str(c.cos_id),
           name: str(c.cos_cname),
           ename: str(c.cos_ename),
@@ -63,7 +64,11 @@ export function parseCosList(json) {
           credit: str(c.cos_credit),
           type: str(c.cos_type),
           dep: str(c.dep_cname),
-        })
+          limit: str(c.num_limit),
+          enrolled: str(c.reg_num),
+        }
+        if (menu) course.menu = menu
+        out.push(course)
       }
     }
   }

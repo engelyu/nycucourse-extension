@@ -1,6 +1,7 @@
 import { parseIds, findInvalidTokens, semesterOfIds } from './lib/parse.js'
 import { searchCourses } from './lib/search.js'
 import { describeCrawl } from './lib/crawlState.js'
+import { formatSeats } from './lib/seats.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -339,7 +340,8 @@ function courseRow(course) {
   meta.className = 'meta'
   const credit = course.credit ? `${Number(course.credit)} 學分` : ''
   const time = course.time.replace(/-(?=,|$)/g, '')
-  meta.textContent = [course.teacher, time, credit, course.dep].filter(Boolean).join(' · ')
+  const seats = formatSeats(course)
+  meta.textContent = [course.teacher, time, credit, seats, course.dep].filter(Boolean).join(' · ')
   meta.title = meta.textContent
   info.append(title, meta)
 
