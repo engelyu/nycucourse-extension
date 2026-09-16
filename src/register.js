@@ -49,10 +49,14 @@ async function load() {
   state.courses = (pre && pre.courses) || []
   state.registered = new Set((((schedule || {}).sources || {}).registered || { courses: [] }).courses.map((c) => String(c.cos_id)))
   state.menus = new Map(((courseData && courseData.courses) || []).filter((c) => c.menu).map((c) => [c.id, c.menu]))
+  renderStatus()
+  render()
+}
+
+function renderStatus() {
   const bits = [`預排 ${state.courses.length} 門`, `已選上 ${state.registered.size} 門`]
   if (!state.menus.size) bits.push('尚未下載課程資料，無法查詢加選狀態')
   $('#status').textContent = bits.join('　|　')
-  render()
 }
 
 function stateCell(cosId) {
@@ -81,6 +85,7 @@ function stateCell(cosId) {
 }
 
 function render() {
+  renderStatus()
   const rows = $('#rows')
   rows.replaceChildren()
   $('#table').hidden = state.courses.length === 0

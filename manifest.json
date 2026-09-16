@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NYCU 預排課程匯入",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "搜尋課名、老師或課號，一鍵加入陽明交大選課系統的預排課程。",
   "icons": {
     "16": "icons/icon16.png",
