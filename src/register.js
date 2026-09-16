@@ -1,4 +1,4 @@
-import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult } from './lib/register.js'
+import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse } from './lib/register.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 
@@ -55,7 +55,8 @@ async function load() {
 
 function renderStatus() {
   const bits = [`預排 ${state.courses.length} 門`, `已選上 ${state.registered.size} 門`]
-  if (!state.menus.size) bits.push('尚未下載課程資料，無法查詢加選狀態')
+  const missing = state.courses.filter((c) => !menuForCourse(c, state.menus.get(String(c.cos_id)))).length
+  if (missing) bits.push(`${missing} 門缺查詢資料，請重新同步或更新課程資料`)
   $('#status').textContent = bits.join('　|　')
 }
 
@@ -120,11 +121,12 @@ function render() {
     const act = document.createElement('td')
     act.className = 'actions-cell'
     if (!state.registered.has(cosId)) {
+      const hasMenu = Boolean(menuForCourse(course, state.menus.get(cosId)))
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.textContent = check && check.availability.canRegister ? (check.availability.needsWish ? '登記' : '加選') : '查詢'
-      btn.disabled = !state.menus.has(cosId)
-      btn.title = state.menus.has(cosId) ? '' : '需要先在 popup 按「更新課程資料」'
+      btn.disabled = !hasMenu
+      btn.title = hasMenu ? '' : '需要先在 popup 按「更新課程資料」，或到課表分頁重新同步'
       btn.addEventListener('click', () => (check && check.availability.canRegister ? openConfirm(course, check) : checkCourse(course, btn)))
       act.append(btn)
     }
@@ -141,7 +143,7 @@ async function checkCourse(course, btn) {
     btn.textContent = '查詢中…'
   }
   showMessage('')
-  const reply = await ask({ type: 'reginfo', cosId, menu: state.menus.get(cosId) })
+  const reply = await ask({ type: 'reginfo', cosId, menu: menuForCourse(course, state.menus.get(cosId)) })
   if (!reply || !reply.ok) {
     showMessage(replyProblem(reply), 'error')
     render()

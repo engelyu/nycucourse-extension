@@ -9,6 +9,27 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null
 }
 
+// 預排資料自帶的查詢路徑（選課網自己記下來的）。回傳時引號會變成 &quot;。
+export function parseMenuData(raw) {
+  const text = str(raw).replace(/&quot;/g, '"').trim()
+  if (!text) return null
+  try {
+    const value = JSON.parse(text)
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+// 查一門課要用哪組路徑：選課網自己給的優先，因為通識等課程的路徑
+// 和課程時間表的系所樹不一樣，用課程時間表的路徑會查不到。
+export function menuForCourse(course, fallbackMenu) {
+  const own = parseMenuData(course && course.menu_data)
+  const base = own || fallbackMenu
+  if (!base) return null
+  return { ...base, category_type: str(course && course.category_type) }
+}
+
 // getregistrationcourselist 回傳以課號為 key 的物件
 export function parseRegInfo(json, cosId) {
   if (!json || typeof json !== 'object') return null

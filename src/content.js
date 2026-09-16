@@ -95,6 +95,10 @@ async function courseLists() {
     memo: c.memo,
     acy: c.acy,
     sem: c.sem,
+    // 選課網自己記下的查詢路徑與通識類別，加選時要用（通識課用課程時間表的路徑查不到）
+    menu_data: c.menu_data,
+    category_type: c.category_type,
+    category_cname: c.category_cname,
   }))
   return { preregist: slim(preregist), registered: slim(registered) }
 }

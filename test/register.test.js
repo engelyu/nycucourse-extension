@@ -129,3 +129,46 @@ test('parseRegResult 解讀加選結果', () => {
   assert.deepEqual(parseRegResult(''), { ok: false, message: '選課網沒有回應內容' })
   assert.deepEqual(parseRegResult('<html>'), { ok: false, message: '無法解析選課網回應' })
 })
+
+test('parseMenuData 解析預排資料自帶的查詢路徑', async () => {
+  const { parseMenuData } = await import('../src/lib/register.js')
+  // 選課網回傳時會把引號變成 &quot;
+  const raw = '{&quot;type&quot;:3,&quot;dep_category&quot;:&quot;0G&quot;,&quot;college_no&quot;:&quot;*&quot;,&quot;dep_uid&quot;:&quot;A91F7169&quot;,&quot;group&quot;:&quot;Z10[0-4]&quot;,&quot;grade&quot;:&quot;&quot;,&quot;class&quot;:&quot;&quot;}'
+  assert.deepEqual(parseMenuData(raw), {
+    type: 3, dep_category: '0G', college_no: '*', dep_uid: 'A91F7169', group: 'Z10[0-4]', grade: '', class: '',
+  })
+  assert.deepEqual(parseMenuData('{"type":1,"dep_uid":"X"}'), { type: 1, dep_uid: 'X' })
+  assert.equal(parseMenuData(''), null)
+  assert.equal(parseMenuData('not json'), null)
+  assert.equal(parseMenuData(null), null)
+})
+
+test('menuForCourse 以預排自帶的路徑優先，沒有才用課程資料', async () => {
+  const { menuForCourse } = await import('../src/lib/register.js')
+  const crawlMenu = { type: '3', dep_category: '0G', college_no: '', dep_uid: 'TIMETABLE-UID' }
+  const course = {
+    cos_id: '561068',
+    menu_data: '{"type":3,"dep_category":"0G","college_no":"*","dep_uid":"COS-UID","group":"Z10[0-4]","grade":"","class":""}',
+    category_type: 'DF91BC7C',
+  }
+  assert.deepEqual(menuForCourse(course, crawlMenu), {
+    type: 3, dep_category: '0G', college_no: '*', dep_uid: 'COS-UID', group: 'Z10[0-4]', grade: '', class: '', category_type: 'DF91BC7C',
+  })
+  assert.deepEqual(menuForCourse({ cos_id: '516701' }, crawlMenu), { ...crawlMenu, category_type: '' })
+  assert.equal(menuForCourse({ cos_id: '516701' }, null), null)
+})
+
+test('通識課的加選資料帶有類別與志願群組', () => {
+  const record = {
+    cos_id: '561068', cos_cname: '生死學', cos_type_code: 'E', wType: 'E', wType_cname: '核心課程',
+    num_limit: '70', registered_num: '70', GroupUID: '51CE2C18', category_type: 'DF91BC7C',
+    category_cname: '基本素養-生命及品格教育', status: 'success', cmsg: '', emsg: '', conflict_num: '0',
+  }
+  const a = describeAvailability(record)
+  assert.equal(a.canRegister, true)
+  assert.equal(a.needsWish, true)
+  assert.ok(a.reasons.includes('人數已滿'))
+  assert.deepEqual(registerParams(record, 1), {
+    cos_id: '561068', cos_type_code: 'E', wType: 'E', wish: '1', category_type: 'DF91BC7C',
+  })
+})
