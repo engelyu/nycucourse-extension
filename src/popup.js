@@ -2,6 +2,7 @@ import { parseIds, findInvalidTokens, semesterOfIds } from './lib/parse.js'
 import { searchCourses } from './lib/search.js'
 import { describeCrawl } from './lib/crawlState.js'
 import { formatSeats } from './lib/seats.js'
+import { courseOutlineUrl } from './lib/links.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -334,10 +335,17 @@ function courseRow(course) {
 
   const info = document.createElement('div')
   info.className = 'info'
-  const title = document.createElement('div')
+  // 課名可以點開課程時間表的課程大綱
+  const url = courseOutlineUrl(state.courseData && state.courseData.semester, course.id)
+  const title = document.createElement(url ? 'a' : 'div')
   title.className = 'title'
+  if (url) {
+    title.href = url
+    title.target = '_blank'
+    title.rel = 'noreferrer'
+  }
   title.append(code(course.id), course.name)
-  title.title = `${course.id} ${course.name}`
+  title.title = url ? `${course.id} ${course.name}（開啟課程大綱）` : `${course.id} ${course.name}`
   const meta = document.createElement('div')
   meta.className = 'meta'
   const credit = course.credit ? `${Number(course.credit)} 學分` : ''

@@ -108,7 +108,9 @@ button:disabled { cursor: default; opacity: .6; }
   border-bottom: 1px solid var(--line);
 }
 .results .info { flex: 1; min-width: 0; }
-.results .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.title { color: inherit; text-decoration: none; }
+a.title:hover, a.title:focus-visible { text-decoration: underline; }
 .results .title code { margin-right: 4px; }
 .results .meta {
   font-size: 12px;
