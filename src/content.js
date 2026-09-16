@@ -99,6 +99,49 @@ async function courseLists() {
   return { preregist: slim(preregist), registered: slim(registered) }
 }
 
+// 正式選課：查一門課能不能加選（等同選課網按下加選時做的檢查）
+async function regInfo({ cosId, menu }) {
+  if (!tokenUsable(token(), Date.now())) return null
+  const m = menu || {}
+  const { status, text } = await post('getregistrationcourselist', {
+    cos_id: cosId,
+    type: m.type ?? '',
+    dep_category: m.dep_category ?? '',
+    college_no: m.college_no ?? '',
+    dep_uid: m.dep_uid ?? '',
+    group: m.group ?? '*',
+    grade: m.grade ?? '*',
+    class: m.class ?? '*',
+    category_type: m.category_type ?? '',
+  })
+  if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+  if (!text.trim()) return null
+  return JSON.parse(text)
+}
+
+// 分發群組（體育、通識等）的志願狀態
+async function wishGroups() {
+  if (!tokenUsable(token(), Date.now())) return null
+  const { status, text } = await post('getCosCategoryWish', {})
+  if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+  if (!text.trim()) return null
+  return JSON.parse(text)
+}
+
+// 正式選課：送出加選。呼叫端要先確認過，這裡只負責送出並回傳原始回應。
+async function register(params) {
+  if (!tokenUsable(token(), Date.now())) return null
+  const { status, text } = await post('setregist', {
+    cos_id: params.cos_id,
+    cos_type_code: params.cos_type_code,
+    wType: params.wType,
+    wish: params.wish,
+    category_type: params.category_type,
+  })
+  if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+  return text
+}
+
 // 同一分頁的請求排隊依序處理：連續按好幾個「加入」時，對選課網的請求仍然一次一個。
 let queue = Promise.resolve()
 function serial(task) {
@@ -121,6 +164,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'import') {
     const ids = Array.isArray(message.ids) ? message.ids : []
     serial(() => importIds(ids)).then(sendResponse)
+    return true
+  }
+  if (message.type === 'reginfo') {
+    serial(() => regInfo({ cosId: message.cosId, menu: message.menu })).then(
+      (json) => sendResponse(json === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, json }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'wishgroups') {
+    serial(wishGroups).then(
+      (groups) => sendResponse(groups === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, groups }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'register') {
+    serial(() => register(message.params || {})).then(
+      (text) => sendResponse(text === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, text }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
     return true
   }
   if (message.type === 'courses') {

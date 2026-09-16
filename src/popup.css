@@ -24,6 +24,7 @@ h1 { font-size: 16px; margin: 0; }
   margin-bottom: 8px;
 }
 .app-bar button { font-size: 12px; }
+.app-bar-actions { display: inline-flex; gap: 6px; }
 h2 { font-size: 13px; margin: 10px 0 4px; }
 label { display: block; margin: 8px 0 4px; }
 button {

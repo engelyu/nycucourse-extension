@@ -1,0 +1,48 @@
+.warning {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--warn);
+  background: rgba(180, 83, 9, .08);
+  font-size: 13px;
+}
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+thead th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding: 6px 8px;
+}
+tbody td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+  vertical-align: top;
+  font-size: 13px;
+}
+td.actions-cell { text-align: right; white-space: nowrap; }
+td .sub { display: block; color: var(--muted); font-size: 12px; }
+code { font-family: ui-monospace, Menlo, monospace; }
+
+.state-ok { color: var(--ok, #15803d); }
+.state-blocked { color: var(--error); }
+.state-wish { color: var(--warn); }
+.state-checking { color: var(--muted); }
+.state-done { color: var(--ok, #15803d); font-weight: 600; }
+.reasons { display: block; color: var(--muted); font-size: 12px; }
+
+.wish-label { margin: 12px 0 6px; font-size: 13px; }
+.wish-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.wish-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.wish-options label.taken { color: var(--muted); }
+.wish-options .reserved { color: var(--muted); font-size: 12px; }
+#confirm { min-width: 460px; }
+#confirm h2 { margin: 0 0 10px; font-size: 16px; }
+#confirm-body { margin: 0; font-size: 14px; line-height: 1.6; }

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>正式選課</title>
+  <link rel="stylesheet" href="schedule.css">
+  <link rel="stylesheet" href="register.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>正式選課</h1>
+    <div class="bar-right">
+      <button id="btn-refresh" type="button">重新讀取</button>
+    </div>
+  </header>
+
+  <p class="warning">
+    這裡是<strong>正式選課</strong>，按下加選會真的改變你的選課結果，和預排課程不同。
+    每門課都會先向選課網確認能不能加選，再由你確認後送出。
+  </p>
+  <p id="status" class="status"></p>
+  <p id="message" class="status message" hidden></p>
+
+  <main>
+    <table id="table" hidden>
+      <thead>
+        <tr>
+          <th>課號</th>
+          <th>課名</th>
+          <th>時間</th>
+          <th>人數</th>
+          <th>狀態</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="empty" hidden>
+      預排課程是空的。先在 popup 搜尋課程加入預排，或到課表分頁按「從選課網同步」。
+    </p>
+  </main>
+
+  <dialog id="confirm">
+    <h2 id="confirm-title">確認加選</h2>
+    <p id="confirm-body"></p>
+    <div id="wish-block" hidden>
+      <p class="wish-label">這門課要用志願序登記，請選第幾志願：</p>
+      <div id="wish-options" class="wish-options"></div>
+    </div>
+    <p id="confirm-error" class="status message error" hidden></p>
+    <div class="actions">
+      <span class="spacer"></span>
+      <button id="btn-cancel" type="button">取消</button>
+      <button id="btn-submit" type="button">確認送出</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="register.js"></script>
+</body>
+</html>
