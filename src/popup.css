@@ -15,7 +15,15 @@ body {
   padding: 12px 14px 14px;
   font: 14px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
 }
-h1 { font-size: 16px; margin: 0 0 8px; }
+h1 { font-size: 16px; margin: 0; }
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.app-bar button { font-size: 12px; }
 h2 { font-size: 13px; margin: 10px 0 4px; }
 label { display: block; margin: 8px 0 4px; }
 button {

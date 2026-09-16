@@ -73,6 +73,32 @@ async function sysStatus() {
   return parseSysStatus(text)
 }
 
+// 課表用：抓預排與正式選課的課程清單
+async function courseLists() {
+  if (!tokenUsable(token(), Date.now())) return null
+  const read = async (path) => {
+    const { status, text } = await post(path, {})
+    if (!isOk(status) || !text.trim()) return null
+    const list = JSON.parse(text)
+    return Array.isArray(list) ? list : []
+  }
+  const [preregist, registered] = await Promise.all([read('getpreregist'), read('getregist')])
+  if (preregist === null && registered === null) return null
+  const slim = (list) => (list || []).map((c) => ({
+    cos_id: c.cos_id,
+    cos_cname: c.cos_cname,
+    cos_time: c.cos_time,
+    lecturers: c.lecturers,
+    cos_credit: c.cos_credit,
+    num_limit: c.num_limit,
+    registered_num: c.registered_num,
+    memo: c.memo,
+    acy: c.acy,
+    sem: c.sem,
+  }))
+  return { preregist: slim(preregist), registered: slim(registered) }
+}
+
 // 同一分頁的請求排隊依序處理：連續按好幾個「加入」時，對選課網的請求仍然一次一個。
 let queue = Promise.resolve()
 function serial(task) {
@@ -95,6 +121,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'import') {
     const ids = Array.isArray(message.ids) ? message.ids : []
     serial(() => importIds(ids)).then(sendResponse)
+    return true
+  }
+  if (message.type === 'courses') {
+    serial(courseLists).then(
+      (lists) => sendResponse(lists ? { ok: true, ...lists } : { ok: false, reason: 'not_logged_in' }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
     return true
   }
   if (message.type === 'sysstatus') {

@@ -504,6 +504,7 @@ async function onBulkImport() {
 
 async function init() {
   $('#btn-open').addEventListener('click', () => chrome.tabs.create({ url: EMULATOR_URL }))
+  $('#btn-schedule').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('src/schedule.html') }))
   $('#btn-reload').addEventListener('click', () => reloadCos())
   $('#btn-crawl').addEventListener('click', startCrawl)
   $('#q').addEventListener('input', renderSearch)

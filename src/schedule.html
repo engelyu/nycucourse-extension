@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>我的課表</title>
+  <link rel="stylesheet" href="schedule.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>我的課表</h1>
+    <div class="bar-right">
+      <div class="tabs" id="source-tabs" role="tablist">
+        <button type="button" data-source="registered" role="tab">正式選課</button>
+        <button type="button" data-source="preregist" role="tab">預排課程</button>
+        <button type="button" data-source="all" role="tab">全部</button>
+      </div>
+      <button id="btn-sync" type="button">從選課網同步</button>
+    </div>
+  </header>
+
+  <p id="status" class="status"></p>
+  <p id="message" class="status message" hidden></p>
+
+  <main>
+    <div id="grid-wrap" class="grid-wrap"></div>
+    <p id="empty" class="empty" hidden>
+      還沒有課表資料。先在選課網分頁登入，再按右上角「從選課網同步」。
+    </p>
+  </main>
+
+  <script type="module" src="schedule.js"></script>
+</body>
+</html>
