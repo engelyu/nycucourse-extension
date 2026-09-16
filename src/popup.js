@@ -253,6 +253,8 @@ function renderData(courseData, crawlState) {
     showHint(errEl, `更新失敗：${crawlState.error || '未知錯誤'}${hasData ? '（已保留原本的課程資料）' : ''}`, 'error')
   } else if (isRunning && !running) {
     showHint(errEl, '上次更新中斷，請重新按更新。', 'error')
+  } else if (crawlState && crawlState.status === 'done' && crawlState.failed > 0 && !running) {
+    showHint(errEl, `有 ${crawlState.failed} 個系所沒抓到，課程可能不完整，稍後可以再更新一次。`, 'warn')
   } else if (state.startError && !running) {
     showHint(errEl, state.startError, 'error')
   } else {

@@ -22,23 +22,30 @@ async function withRetry(task, label, { retryDelayMs, sleep, isStopped }) {
   throw new Error(`${label} 抓取失敗：${reason}`)
 }
 
-// 任一 worker 失敗後，其他 worker 做完手上的請求就停，不再抓新的項目。
-async function pool(items, concurrency, worker) {
+// 少數系所失敗時照樣繼續，超過容許值才停下；回傳失敗的項目與最後一個錯誤。
+async function pool(items, concurrency, worker, maxFailures) {
   let next = 0
-  let failed = false
-  const isStopped = () => failed
+  let stopped = false
+  let lastError = null
+  const failures = []
+  const isStopped = () => stopped
   const runners = Array.from({ length: Math.max(1, Math.min(concurrency, items.length)) }, async () => {
-    while (!failed && next < items.length) {
+    while (!stopped && next < items.length) {
       const index = next++
       try {
         await worker(items[index], isStopped)
       } catch (err) {
-        failed = true
-        throw err
+        failures.push(items[index])
+        lastError = err
+        if (failures.length > maxFailures) {
+          stopped = true
+          throw err
+        }
       }
     }
   })
   await Promise.all(runners)
+  return { failures, lastError }
 }
 
 export async function crawlSemester({
@@ -46,6 +53,7 @@ export async function crawlSemester({
   onProgress = () => {},
   concurrency = 3,
   retryDelayMs = 500,
+  maxFailedDeps = 5,
   sleep = defaultSleep,
 }) {
   const post = (fn, params) => fetchJson(fn, { method: 'POST', body: formBody(params) })
@@ -91,7 +99,7 @@ export async function crawlSemester({
   const courses = new Map()
   let done = 0
   onProgress({ phase: 'courses', done, total: depUids.length })
-  await pool(depUids, concurrency, async (uid, isStopped) => {
+  const { failures: failedDeps, lastError } = await pool(depUids, concurrency, async (uid, isStopped) => {
     const json = await withRetry(() => post('get_cos_list', cosListParams(semester, uid)), uid, { retryDelayMs, sleep, isStopped })
     if (isStopped()) return
     for (const course of parseCosList(json, depMenus.get(uid))) {
@@ -99,10 +107,14 @@ export async function crawlSemester({
     }
     done++
     onProgress({ phase: 'courses', done, total: depUids.length })
-  })
+  }, maxFailedDeps)
+  // 全部系所都失敗時當成整體失敗，才不會用空資料覆蓋舊資料
+  if (failedDeps.length === depUids.length) {
+    throw lastError || new Error('所有系所都抓取失敗')
+  }
   if (courses.size === 0) {
     throw new Error('沒有抓到任何課程，課程時間表可能暫時無法使用或已改版')
   }
 
-  return { semester, courses: [...courses.values()] }
+  return { semester, courses: [...courses.values()], failedDeps }
 }

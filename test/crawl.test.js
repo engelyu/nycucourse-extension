@@ -104,9 +104,26 @@ test('第一次就成功時不等待', async () => {
   assert.deepEqual(delays, [])
 })
 
-test('重試用完仍失敗則整體 reject', async () => {
+test('少數系所失敗時仍完成，並回報失敗的系所', async () => {
   const { fetchJson } = fakeServer({ failDep: 'DEP-B', failTimes: 99 })
-  await assert.rejects(crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep }), /DEP-B/)
+  const r = await crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep })
+  assert.deepEqual(r.failedDeps, ['DEP-B'])
+  // DEP-A 的兩門課仍在
+  assert.deepEqual(r.courses.map((c) => c.id).sort(), ['000001', '000002'])
+})
+
+test('失敗數超過容許值時整體 reject', async () => {
+  const { fetchJson } = fakeServer({ failDep: 'DEP-B', failTimes: 99 })
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep, maxFailedDeps: 0 }), /DEP-B/)
+})
+
+test('全部系所都失敗時整體 reject，不會回傳空課程', async () => {
+  const { fetchJson: base } = fakeServer()
+  const fetchJson = async (fn, opts) => {
+    if (fn === 'get_cos_list') throw new Error('boom')
+    return base(fn, opts)
+  }
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 1, sleep: noSleep, maxFailedDeps: 5 }), /抓取失敗/)
 })
 
 // DEP-A 立刻徹底失敗；DEP-B 由第二個 worker 處理但很慢，失敗發生時它還在跑
@@ -121,19 +138,19 @@ function slowBServer() {
   return { fetchJson, calls: server.calls }
 }
 
-test('一個系所徹底失敗後，其他 worker 不再抓新的系所', async () => {
+test('超過容許值後，其他 worker 不再抓新的系所', async () => {
   const { fetchJson, calls } = slowBServer()
-  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep }), /DEP-A/)
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep, maxFailedDeps: 0 }), /DEP-A/)
   await new Promise((r) => setTimeout(r, 60))
   const byDep = (uid) => calls.filter((c) => c.fn === 'get_cos_list' && c.p.m_dep_uid === uid).length
   assert.equal(byDep('DEP-B'), 1)
   assert.equal(byDep('DEP-C'), 0)
 })
 
-test('失敗後，還在跑的 worker 完成時不再回報課程進度', async () => {
+test('超過容許值後，還在跑的 worker 完成時不再回報課程進度', async () => {
   const { fetchJson } = slowBServer()
   const events = []
-  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep, onProgress: (e) => events.push(e) }))
+  await assert.rejects(crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep, maxFailedDeps: 0, onProgress: (e) => events.push(e) }))
   await new Promise((r) => setTimeout(r, 60))
   assert.equal(events.filter((e) => e.phase === 'courses' && e.done > 0).length, 0)
 })
@@ -176,4 +193,10 @@ test('讀取系所清單時每個請求後都回報進度', async () => {
   const treeRequests = calls.filter((c) => treeFns.includes(c.fn)).length
   const treeEvents = events.filter((e) => e.phase === 'tree').length
   assert.ok(treeEvents >= treeRequests, `tree events ${treeEvents} < requests ${treeRequests}`)
+})
+
+test('沒有失敗時 failedDeps 是空陣列', async () => {
+  const { fetchJson } = fakeServer()
+  const r = await crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep })
+  assert.deepEqual(r.failedDeps, [])
 })

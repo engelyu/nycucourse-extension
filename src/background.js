@@ -29,7 +29,7 @@ async function startCrawl() {
   running = (async () => {
     state.reset({ status: 'running', phase: 'tree', done: 0, total: 0, startedAt: Date.now() })
     try {
-      const { semester, courses } = await crawlSemester({
+      const { semester, courses, failedDeps } = await crawlSemester({
         fetchJson,
         concurrency: 3,
         onProgress: ({ phase, done, total }) => {
@@ -37,8 +37,9 @@ async function startCrawl() {
           if (state.current().status === 'running') state.update({ phase, done, total })
         },
       })
-      await chrome.storage.local.set({ courseData: { semester, updatedAt: Date.now(), courses } })
-      await state.update({ status: 'done' })
+      const failed = failedDeps.length
+      await chrome.storage.local.set({ courseData: { semester, updatedAt: Date.now(), courses, failed } })
+      await state.update({ status: 'done', failed })
     } catch (err) {
       await state.update({ status: 'error', error: err && err.message ? err.message : String(err) })
     } finally {
