@@ -142,6 +142,28 @@ async function register(params) {
   return text
 }
 
+// 即時選課人數：以系所為單位查詢，一次拿回整個系所的課
+async function deptCounts(menus) {
+  if (!tokenUsable(token(), Date.now())) return null
+  const out = {}
+  for (const menu of Array.isArray(menus) ? menus : []) {
+    const { status, text } = await post('preregistcourse', {
+      type: menu.type ?? '',
+      dep_category: menu.dep_category ?? '',
+      college_no: menu.college_no ?? '',
+      dep_uid: menu.dep_uid ?? '',
+      group: menu.group ?? '*',
+      grade: menu.grade ?? '*',
+      class: menu.class ?? '*',
+      codition: '',
+    })
+    if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+    if (!text.trim()) return null
+    out[menu.dep_uid] = JSON.parse(text)
+  }
+  return out
+}
+
 // 同一分頁的請求排隊依序處理：連續按好幾個「加入」時，對選課網的請求仍然一次一個。
 let queue = Promise.resolve()
 function serial(task) {
@@ -164,6 +186,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'import') {
     const ids = Array.isArray(message.ids) ? message.ids : []
     serial(() => importIds(ids)).then(sendResponse)
+    return true
+  }
+  if (message.type === 'deptcounts') {
+    serial(() => deptCounts(message.menus)).then(
+      (lists) => sendResponse(lists === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, lists }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
     return true
   }
   if (message.type === 'reginfo') {

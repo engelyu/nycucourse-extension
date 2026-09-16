@@ -156,3 +156,13 @@ details > button { margin-top: 8px; }
 .group ul { margin: 0; padding-left: 18px; }
 code { font-family: ui-monospace, Menlo, monospace; }
 .group-error li { color: var(--error); }
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.search-bar .hint { flex: 1; }
+.search-bar button { font-size: 12px; padding: 2px 8px; }
+.results .meta .live { color: var(--accent, #1f6feb); }

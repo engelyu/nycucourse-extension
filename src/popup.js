@@ -3,6 +3,7 @@ import { searchCourses } from './lib/search.js'
 import { describeCrawl } from './lib/crawlState.js'
 import { formatSeats } from './lib/seats.js'
 import { courseOutlineUrl } from './lib/links.js'
+import { parseDeptCounts, menusToFetch, mergeCounts, countsFresh } from './lib/counts.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -19,6 +20,7 @@ const state = {
   needsReload: false, // 有新加入的課，提示重新整理
   cosSemester: null, // 選課網目前學期
   sysStatus: null, // 選課網系統公告（例如非選課時段）
+  counts: {}, // dep_uid -> { at, counts }：即時選課人數的快取
   courseData: undefined,
   crawlState: undefined,
   courses: [],
@@ -351,7 +353,17 @@ function courseRow(course) {
   const credit = course.credit ? `${Number(course.credit)} 學分` : ''
   const time = course.time.replace(/-(?=,|$)/g, '')
   const seats = formatSeats(course)
-  meta.textContent = [course.teacher, time, credit, seats, course.dep].filter(Boolean).join(' · ')
+  const before = [course.teacher, time, credit].filter(Boolean).join(' · ')
+  const after = course.dep ? ` · ${course.dep}` : ''
+  meta.replaceChildren(document.createTextNode(before))
+  if (seats) {
+    meta.append(document.createTextNode(' · '))
+    const span = document.createElement('span')
+    if (course.live) span.className = 'live'
+    span.textContent = seats
+    meta.append(span)
+  }
+  meta.append(document.createTextNode(after))
   meta.title = meta.textContent
   info.append(title, meta)
 
@@ -379,11 +391,65 @@ function renderSearch() {
     showHint(summary, '')
     return
   }
-  const { total, items } = searchCourses(state.courses, q, 50)
+  const { total, items: found } = searchCourses(state.courses, q, 50)
+  const items = mergeCounts(found, flatCounts())
+  $('#btn-counts').hidden = items.length === 0
+  $('#btn-counts').disabled = !state.cosReady
+  $('#btn-counts').title = state.cosReady ? '向選課網查目前的選課人數' : '要在選課網分頁才能查人數'
   showHint(summary, total === 0
     ? '找不到符合的課程'
     : total > items.length ? `共 ${total} 筆，顯示前 ${items.length} 筆` : `共 ${total} 筆`)
   list.append(...items.map(courseRow))
+}
+
+// 把各系所的人數快取攤平成「課號 -> 人數」
+function flatCounts() {
+  const out = {}
+  for (const entry of Object.values(state.counts || {})) {
+    if (!countsFresh(entry)) continue
+    Object.assign(out, entry.counts)
+  }
+  return out
+}
+
+async function loadCounts() {
+  const { deptCounts } = await chrome.storage.session.get('deptCounts')
+  state.counts = deptCounts || {}
+}
+
+// 查目前選課人數：以系所為單位查，同一個系所五分鐘內只查一次
+async function fetchCounts() {
+  const btn = $('#btn-counts')
+  if (!state.cosReady || !state.tab) return
+  const q = $('#q').value
+  const { items } = searchCourses(state.courses, q, 50)
+  const menus = menusToFetch(items, state.counts, 8)
+  if (!menus.length) {
+    showHint($('#search-summary'), '人數已是最新的（五分鐘內查過）', 'warn')
+    return
+  }
+  btn.disabled = true
+  btn.textContent = '查詢中…'
+  try {
+    const reply = await send(state.tab.id, { type: 'deptcounts', menus })
+    if (!reply || !reply.ok) {
+      showHint($('#search-summary'), reply && reply.reason === 'not_logged_in' ? '請先登入選課網。' : '查人數失敗，請稍後再試。', 'error')
+      return
+    }
+    const now = Date.now()
+    const next = { ...state.counts }
+    for (const [uid, list] of Object.entries(reply.lists || {})) {
+      next[uid] = { at: now, counts: parseDeptCounts(list) }
+    }
+    state.counts = next
+    await chrome.storage.session.set({ deptCounts: next })
+    renderSearch()
+  } catch {
+    showHint($('#search-summary'), '無法連到選課網頁面，請重新整理該分頁。', 'error')
+  } finally {
+    btn.disabled = !state.cosReady
+    btn.textContent = '查人數'
+  }
 }
 
 async function addSingle(id) {
@@ -509,6 +575,7 @@ async function init() {
   $('#btn-reload').addEventListener('click', () => reloadCos())
   $('#btn-crawl').addEventListener('click', startCrawl)
   $('#q').addEventListener('input', renderSearch)
+  $('#btn-counts').addEventListener('click', fetchCounts)
   $('#btn-import').addEventListener('click', onBulkImport)
 
   // 直接用事件帶來的新值，更新進度時不必重新讀取整份課程資料
@@ -521,7 +588,7 @@ async function init() {
   // 每秒重畫：更新經過時間、在沒有新事件時切換「網站較慢」與「中斷」提示
   setInterval(() => renderData(state.courseData, state.crawlState), 1000)
 
-  await Promise.all([detectTab(), loadData()])
+  await Promise.all([detectTab(), loadData(), loadCounts()])
   renderSearch()
   $('#q').focus()
 }
