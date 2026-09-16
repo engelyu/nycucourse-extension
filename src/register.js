@@ -1,6 +1,7 @@
 import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse, registrationState, describeRegistration } from './lib/register.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
+import { timeWarning } from './lib/autoreg.js'
 
 const $ = (sel) => document.querySelector(sel)
 
@@ -11,6 +12,14 @@ const state = {
   groups: {}, // 分發群組（志願序）
   checks: new Map(), // cosId -> { availability, record }
   pending: null, // 確認中的課程
+  auto: { enabled: false, time: '13:00', items: [], log: [] }, // 每日自動登記設定
+  autoNext: null, // 下次自動執行的時間
+}
+
+function setNote(el, text, kind = '') {
+  el.textContent = text
+  el.classList.toggle('error', kind === 'error')
+  el.hidden = !text
 }
 
 function showMessage(text, kind = '') {
@@ -52,6 +61,7 @@ async function load() {
   state.menus = new Map(((courseData && courseData.courses) || []).filter((c) => c.menu).map((c) => [c.id, c.menu]))
   renderStatus()
   render()
+  if (state.auto) renderAuto()
 }
 
 function renderStatus() {
@@ -290,7 +300,146 @@ async function refreshRegistered() {
   state.courses = reply.preregist || []
 }
 
+// ---------- 每日自動登記 ----------
+
+function formatWhen(ms) {
+  if (!ms) return ''
+  const d = new Date(ms)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+async function askBackground(message) {
+  try {
+    return await chrome.runtime.sendMessage(message)
+  } catch (err) {
+    return { ok: false, detail: String(err && err.message ? err.message : err) }
+  }
+}
+
+async function loadAuto() {
+  const reply = await askBackground({ type: 'auto:get' })
+  if (!reply || !reply.ok) return
+  state.auto = reply.config
+  state.autoNext = reply.nextRun
+  renderAuto()
+}
+
+async function saveAuto(patch) {
+  const reply = await askBackground({ type: 'auto:set', patch })
+  if (!reply || !reply.ok) {
+    showMessage('無法儲存自動登記設定', 'error')
+    return
+  }
+  state.auto = reply.config
+  state.autoNext = reply.nextRun
+  renderAuto()
+}
+
+function renderAutoPickers() {
+  const courseSelect = $('#auto-course')
+  const chosen = new Set((state.auto.items || []).map((i) => i.cosId))
+  const previous = courseSelect.value
+  courseSelect.replaceChildren()
+  for (const course of state.courses) {
+    const cosId = String(course.cos_id)
+    if (chosen.has(cosId)) continue
+    const option = document.createElement('option')
+    option.value = cosId
+    option.textContent = `${cosId} ${course.cos_cname}`
+    courseSelect.append(option)
+  }
+  if (previous) courseSelect.value = previous
+  courseSelect.disabled = courseSelect.options.length === 0
+
+  const wishSelect = $('#auto-wish')
+  if (!wishSelect.options.length) {
+    const choices = [['', '不需志願序'], ['1', '第 1 志願'], ['2', '第 2 志願'], ['3', '第 3 志願'], ['4', '第 4 志願'], ['5', '第 5 志願']]
+    for (const [value, label] of choices) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = label
+      wishSelect.append(option)
+    }
+  }
+}
+
+function renderAuto() {
+  const cfg = state.auto || {}
+  $('#auto-enabled').checked = Boolean(cfg.enabled)
+  $('#auto-time').value = cfg.time || '13:00'
+  $('#auto-next').textContent = cfg.enabled && state.autoNext ? `下次執行：${formatWhen(state.autoNext)}` : '目前關閉'
+  setNote($('#auto-warning'), timeWarning(cfg.time || ''))
+
+  const list = $('#auto-list')
+  list.replaceChildren()
+  for (const item of cfg.items || []) {
+    const li = document.createElement('li')
+    const course = state.courses.find((c) => String(c.cos_id) === item.cosId)
+    const text = document.createElement('span')
+    text.textContent = `${item.cosId} ${item.title || (course && course.cos_cname) || ''}　${item.wish ? `第 ${item.wish} 志願` : '直接加選'}`
+    const remove = document.createElement('button')
+    remove.type = 'button'
+    remove.textContent = '移除'
+    remove.addEventListener('click', () => saveAuto({ items: (state.auto.items || []).filter((i) => i.cosId !== item.cosId) }))
+    li.append(text, remove)
+    list.append(li)
+  }
+  if (!(cfg.items || []).length) {
+    const li = document.createElement('li')
+    li.textContent = '清單是空的，從下面選一門預排課程加入。'
+    list.append(li)
+  }
+
+  const log = $('#auto-log')
+  log.replaceChildren()
+  for (const entry of (cfg.log || []).slice(0, 5)) {
+    const li = document.createElement('li')
+    if ((entry.results || []).some((r) => !r.ok)) li.className = 'failed'
+    const text = document.createElement('span')
+    text.textContent = `${formatWhen(entry.at)}　${entry.trigger === 'manual' ? '手動' : '自動'}　${entry.summary || entry.note}`
+    li.append(text)
+    log.append(li)
+  }
+  if (!(cfg.log || []).length) {
+    const li = document.createElement('li')
+    li.textContent = '還沒有執行紀錄。'
+    log.append(li)
+  }
+  renderAutoPickers()
+}
+
+function initAuto() {
+  $('#auto-enabled').addEventListener('change', (e) => saveAuto({ enabled: e.target.checked }))
+  $('#auto-time').addEventListener('change', (e) => saveAuto({ time: e.target.value }))
+  $('#auto-add').addEventListener('click', () => {
+    const cosId = $('#auto-course').value
+    if (!cosId) return
+    const course = state.courses.find((c) => String(c.cos_id) === cosId)
+    const items = [...(state.auto.items || []), { cosId, wish: $('#auto-wish').value, title: course ? course.cos_cname : '' }]
+    saveAuto({ items })
+  })
+  $('#auto-run').addEventListener('click', async () => {
+    const btn = $('#auto-run')
+    btn.disabled = true
+    btn.textContent = '執行中…'
+    try {
+      const reply = await askBackground({ type: 'auto:run' })
+      if (reply && reply.ok) showMessage(`自動登記：${reply.entry.summary || reply.entry.note}`)
+      else showMessage('自動登記執行失敗', 'error')
+      await loadAuto()
+      const refreshed = await ask({ type: 'courses' })
+      if (refreshed && refreshed.ok) await refreshRegistered()
+      render()
+    } finally {
+      btn.disabled = false
+      btn.textContent = '立刻執行一次'
+    }
+  })
+}
+
 function init() {
+  initAuto()
   $('#btn-refresh').addEventListener('click', async () => {
     showMessage('')
     const reply = await ask({ type: 'courses' })
@@ -305,7 +454,7 @@ function init() {
   })
   $('#btn-cancel').addEventListener('click', () => $('#confirm').close())
   $('#btn-submit').addEventListener('click', submit)
-  load()
+  load().then(loadAuto)
 }
 
 init()

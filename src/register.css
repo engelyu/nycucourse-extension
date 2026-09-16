@@ -30,6 +30,23 @@ code { font-family: ui-monospace, Menlo, monospace; }
 .state-done { color: var(--ok, #15803d); font-weight: 600; }
 .reasons { display: block; color: var(--muted); font-size: 12px; }
 
+#auto { margin-top: 32px; border-top: 1px solid var(--line); padding-top: 16px; }
+#auto h2 { font-size: 16px; margin: 0 0 6px; }
+#auto h3 { font-size: 14px; margin: 18px 0 6px; color: var(--muted); }
+.auto-note { margin: 0 0 12px; font-size: 13px; color: var(--muted); max-width: 720px; }
+.auto-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.auto-row select, .auto-row input[type="time"] { font: inherit; padding: 4px 6px; }
+.auto-row .sub { color: var(--muted); }
+#auto-list li, #auto-log li { font-size: 13px; }
+#auto-log li.failed span { color: var(--error); }
+
 .wish-label { margin: 12px 0 6px; font-size: 13px; }
 .wish-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .wish-options label {

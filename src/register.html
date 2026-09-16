@@ -38,6 +38,29 @@
     <p id="empty" class="empty" hidden>
       預排課程是空的。先在 popup 搜尋課程加入預排，或到課表分頁按「從選課網同步」。
     </p>
+
+    <section id="auto">
+      <h2>每日自動登記</h2>
+      <p class="auto-note">
+        加退選期間每天都要重新登記。開啟後會在指定時間自動登記下面清單裡的課，
+        每門課每天只送一次，失敗不重試。需要選課網保持登入，瀏覽器也要開著。
+      </p>
+      <div class="auto-row">
+        <label><input type="checkbox" id="auto-enabled"> 每天自動登記</label>
+        <label>時間 <input type="time" id="auto-time" value="13:00"></label>
+        <button id="auto-run" type="button">立刻執行一次</button>
+        <span id="auto-next" class="sub"></span>
+      </div>
+      <p id="auto-warning" class="status message" hidden></p>
+      <div class="auto-row">
+        <select id="auto-course"></select>
+        <select id="auto-wish"></select>
+        <button id="auto-add" type="button">加入清單</button>
+      </div>
+      <ul id="auto-list" class="manual-list"></ul>
+      <h3>最近結果</h3>
+      <ul id="auto-log" class="manual-list"></ul>
+    </section>
   </main>
 
   <dialog id="confirm">
