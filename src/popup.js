@@ -16,6 +16,7 @@ const state = {
   reloading: false, // 正在重新整理選課網
   needsReload: false, // 有新加入的課，提示重新整理
   cosSemester: null, // 選課網目前學期
+  sysStatus: null, // 選課網系統公告（例如非選課時段）
   courseData: undefined,
   crawlState: undefined,
   courses: [],
@@ -115,7 +116,10 @@ async function reloadCos() {
   state.reloading = false
   renderTabBar()
   renderSearch()
-  if (state.cosReady) refreshCosSemester()
+  if (state.cosReady) {
+    refreshCosSemester()
+    refreshSysStatus()
+  }
   return state.cosReady
 }
 
@@ -137,7 +141,10 @@ async function detectTab() {
   state.connecting = false
   renderTabBar()
   renderSearch()
-  if (state.cosReady) refreshCosSemester()
+  if (state.cosReady) {
+    refreshCosSemester()
+    refreshSysStatus()
+  }
 }
 
 function renderTabBar() {
@@ -173,6 +180,23 @@ async function refreshCosSemester() {
     state.cosSemester = null
   }
   renderSemesterWarning()
+}
+
+// 讀選課網的系統狀態；有公告就顯示，例如非選課時段或系統維護。
+async function refreshSysStatus() {
+  if (!state.tab || !state.cosReady) return
+  try {
+    const reply = await chrome.tabs.sendMessage(state.tab.id, { type: 'sysstatus' })
+    state.sysStatus = reply && reply.status ? reply.status : null
+  } catch {
+    state.sysStatus = null
+  }
+  renderSysStatus()
+}
+
+function renderSysStatus() {
+  const s = state.sysStatus
+  showHint($('#sys-status'), s && s.message ? `選課網公告：${s.message}` : '', 'warn')
 }
 
 // 課程資料學期與選課網學期不同時提醒：課號在不同學期可能對應不同課程。
@@ -372,6 +396,9 @@ async function addSingle(id) {
     state.addStatus.set(id, { status: 'error', msg: (reply && reply.detail) || '未知錯誤' })
   }
   renderSearch()
+  // 加不進去時可能是選課網公告的停機時段，重新讀一次狀態讓使用者知道原因
+  const result = state.addStatus.get(id)
+  if (!result || result === 'pending' || result.status === 'error' || result.msg) refreshSysStatus()
 }
 
 // ---------- 批次貼上 ----------
@@ -433,6 +460,7 @@ async function onBulkImport() {
   renderBulkResults(reply.results, invalid)
   for (const r of reply.results) state.addStatus.set(r.id, r)
   renderSearch()
+  if (reply.warning || reply.results.some((r) => r.status === 'error')) refreshSysStatus()
 
   const notes = []
   if (prefix.mixed) {

@@ -96,3 +96,33 @@ test('runBatch 預排清單回 null 代表登入失效', async () => {
   const r = await runBatch(['516701'], async (id) => classifyResult(id, ''), async () => null)
   assert.deepEqual(r, { ok: false, reason: 'not_logged_in' })
 })
+
+const { parseSysStatus } = globalThis.NycuClassify
+
+test('parseSysStatus 取出中文訊息與狀態碼', () => {
+  const body = JSON.stringify({ status: '2', cmsg: '目前非選課時段', emsg: 'Course selection is closed' })
+  assert.deepEqual(parseSysStatus(body), { code: '2', message: '目前非選課時段' })
+})
+
+test('parseSysStatus 接受陣列包起來的回應', () => {
+  const body = JSON.stringify([{ status: 3, cmsg: '系統維護中', emsg: 'Under maintenance' }])
+  assert.deepEqual(parseSysStatus(body), { code: '3', message: '系統維護中' })
+})
+
+test('parseSysStatus 沒有中文訊息時退回英文', () => {
+  const body = JSON.stringify({ status: '1', cmsg: '   ', emsg: 'System is open' })
+  assert.deepEqual(parseSysStatus(body), { code: '1', message: 'System is open' })
+})
+
+test('parseSysStatus 沒有訊息時回傳 null', () => {
+  assert.equal(parseSysStatus(JSON.stringify({ status: '1', cmsg: '', emsg: '' })), null)
+  assert.equal(parseSysStatus(''), null)
+  assert.equal(parseSysStatus('   '), null)
+  assert.equal(parseSysStatus('<html>not json</html>'), null)
+  assert.equal(parseSysStatus(JSON.stringify([])), null)
+  assert.equal(parseSysStatus(null), null)
+})
+
+test('parseSysStatus 沒有狀態碼時 code 為空字串', () => {
+  assert.deepEqual(parseSysStatus(JSON.stringify({ cmsg: '公告' })), { code: '', message: '公告' })
+})

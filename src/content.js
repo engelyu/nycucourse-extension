@@ -1,6 +1,6 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, parseSysStatus } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
 function token() {
@@ -65,6 +65,14 @@ async function currentSemester() {
   }
 }
 
+// 選課網目前的系統狀態與公告（例如非選課時段）。由伺服器決定，這裡不判斷時間。
+async function sysStatus() {
+  if (!tokenUsable(token(), Date.now())) return null
+  const { status, text } = await post('sysstatuslvl', {})
+  if (!isOk(status)) return null
+  return parseSysStatus(text)
+}
+
 // 同一分頁的請求排隊依序處理：連續按好幾個「加入」時，對選課網的請求仍然一次一個。
 let queue = Promise.resolve()
 function serial(task) {
@@ -87,6 +95,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'import') {
     const ids = Array.isArray(message.ids) ? message.ids : []
     serial(() => importIds(ids)).then(sendResponse)
+    return true
+  }
+  if (message.type === 'sysstatus') {
+    serial(sysStatus).then(
+      (status) => sendResponse({ ok: true, status }),
+      () => sendResponse({ ok: true, status: null }),
+    )
     return true
   }
   if (message.type === 'semester') {

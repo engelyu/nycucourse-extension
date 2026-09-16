@@ -81,5 +81,25 @@
     return { ok: true, results: confirmWithList(results, present) }
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch })
+  // 解析選課網的系統狀態（/sysstatuslvl）。選課網自己讀的是回應陣列的第一筆，
+  // 這裡兩種形狀都接受。沒有訊息就回 null，不去解讀狀態碼的意思。
+  function parseSysStatus(responseText) {
+    const text = String(responseText ?? '').trim()
+    if (!text) return null
+    let parsed
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      return null
+    }
+    const info = Array.isArray(parsed) ? parsed[0] : parsed
+    if (!info || typeof info !== 'object') return null
+    const pick = (v) => (typeof v === 'string' ? v.trim() : '')
+    const message = pick(info.cmsg) || pick(info.emsg)
+    if (!message) return null
+    const code = info.status == null ? '' : String(info.status)
+    return { code, message }
+  }
+
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus })
 })(globalThis)
