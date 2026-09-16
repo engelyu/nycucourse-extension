@@ -99,3 +99,22 @@ test('buildWeek 週末有課時才顯示週末', () => {
   const sat = manualItem({ id: 's', title: '週六活動', slots: [{ day: 6, period: '3' }] })
   assert.deepEqual(buildWeek([sat]).days, [1, 2, 3, 4, 5, 6])
 })
+
+test('slotsFromPeriodRange 產生節次範圍的時段', async () => {
+  const { slotsFromPeriodRange } = await import('../src/lib/schedule.js')
+  assert.deepEqual(slotsFromPeriodRange(3, '3', '4', 'SA321').map((s) => s.period), ['3', '4'])
+  assert.deepEqual(slotsFromPeriodRange(1, 'n', 'n').map((s) => s.period), ['n'])
+  assert.deepEqual(slotsFromPeriodRange(1, '4', '2').map((s) => s.period), ['2', '3', '4'])
+  assert.deepEqual(slotsFromPeriodRange(1, 'x', '2'), [])
+  assert.deepEqual(slotsFromPeriodRange(0, '1', '2'), [])
+  assert.equal(slotsFromPeriodRange(2, '1', '2', '體育館')[0].room, '體育館')
+})
+
+test('自訂行程存檔用的純資料格式', async () => {
+  const { manualItem, slotsFromTimeRange } = await import('../src/lib/schedule.js')
+  const item = manualItem({ id: 'swim', title: '游泳', url: 'https://pool.example', color: '#0a0', slots: slotsFromTimeRange(3, '19:00', '20:30', '體育館') })
+  assert.equal(item.source, 'manual')
+  assert.equal(item.color, '#0a0')
+  assert.equal(item.slots[0].room, '體育館')
+  assert.deepEqual(JSON.parse(JSON.stringify(item)), item)
+})

@@ -92,3 +92,77 @@ td { height: 52px; }
 .item:hover, .item:focus-visible { outline: 2px solid var(--accent); }
 .item .title { font-weight: 600; display: block; }
 .item .sub { color: var(--muted); display: block; }
+
+/* 課表格子裡的編輯鈕 */
+.item { position: relative; display: flex; align-items: flex-start; gap: 2px; }
+.item-main { flex: 1; min-width: 0; color: inherit; text-decoration: none; }
+.item-main .title { font-weight: 600; display: block; }
+.item-main .sub { color: var(--muted); display: block; }
+.item-main:hover .title, .item-main:focus-visible .title { text-decoration: underline; }
+.item-edit {
+  border: 0;
+  background: transparent;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--muted);
+  opacity: 0;
+}
+.item:hover .item-edit, .item-edit:focus-visible { opacity: 1; }
+
+/* 清單 */
+h2 { font-size: 15px; margin: 24px 0 8px; }
+.manual-list { list-style: none; margin: 0; padding: 0; max-width: 720px; }
+.manual-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.manual-list li span { flex: 1; }
+.manual-list button { padding: 3px 10px; font-size: 12px; }
+
+/* 編輯視窗 */
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  min-width: 420px;
+  color: inherit;
+  background: Canvas;
+}
+dialog::backdrop { background: rgba(0, 0, 0, .35); }
+dialog h2 { margin: 0 0 12px; font-size: 16px; }
+dialog label { display: block; margin: 10px 0; }
+dialog label.row { display: flex; align-items: center; gap: 10px; }
+dialog input[type="text"], dialog input[type="url"] {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 8px;
+  font: inherit;
+}
+.slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+.slot-row select, .slot-row input {
+  font: inherit;
+  padding: 4px 6px;
+}
+.slot-row .f-room { width: 110px; }
+.link-like {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 2px 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.actions .spacer { flex: 1; }
+button.danger { color: var(--error); }

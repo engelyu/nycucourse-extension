@@ -75,6 +75,15 @@ export function slotsFromTimeRange(day, start, end, room = '') {
   }).map((p) => ({ day: Number(day), period: p.code, room: str(room), campus: '' }))
 }
 
+// 用節次範圍建立時段，例如週三第 3 到第 4 節
+export function slotsFromPeriodRange(day, fromCode, toCode, room = '') {
+  const a = periodIndex(fromCode)
+  const b = periodIndex(toCode)
+  if (a < 0 || b < 0 || !Number(day)) return []
+  const [start, end] = a <= b ? [a, b] : [b, a]
+  return PERIODS.slice(start, end + 1).map((p) => ({ day: Number(day), period: p.code, room: str(room), campus: '' }))
+}
+
 // 使用者對同步進來的課做的調整（連結、顏色、隱藏），以課號為key，重新同步後仍保留
 export function applyOverrides(items, overrides = {}) {
   const out = []

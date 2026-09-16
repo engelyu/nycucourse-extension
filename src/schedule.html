@@ -14,6 +14,7 @@
         <button type="button" data-source="preregist" role="tab">預排課程</button>
         <button type="button" data-source="all" role="tab">全部</button>
       </div>
+      <button id="btn-add" type="button">新增行程</button>
       <button id="btn-sync" type="button">從選課網同步</button>
     </div>
   </header>
@@ -24,9 +25,78 @@
   <main>
     <div id="grid-wrap" class="grid-wrap"></div>
     <p id="empty" class="empty" hidden>
-      還沒有課表資料。先在選課網分頁登入，再按右上角「從選課網同步」。
+      還沒有課表資料。先在選課網分頁登入再按「從選課網同步」，或按「新增行程」自己加。
     </p>
+
+    <section id="manual-section" hidden>
+      <h2>自訂行程</h2>
+      <ul id="manual-list" class="manual-list"></ul>
+    </section>
+
+    <section id="override-section" hidden>
+      <h2>已調整的課程</h2>
+      <ul id="override-list" class="manual-list"></ul>
+    </section>
   </main>
+
+  <dialog id="editor">
+    <form id="editor-form" method="dialog">
+      <h2 id="editor-title">新增行程</h2>
+
+      <div id="manual-fields">
+        <label>名稱<input id="f-title" type="text" required maxlength="40" placeholder="例如 游泳、外校課程"></label>
+        <div id="slot-rows"></div>
+        <button id="btn-add-slot" type="button" class="link-like">再加一個時段</button>
+      </div>
+
+      <label>連結<input id="f-url" type="url" placeholder="https://e3.nycu.edu.tw/... 留空則開課程大綱"></label>
+      <label class="row">顏色
+        <input id="f-color" type="color" value="#16a34a">
+        <button id="btn-clear-color" type="button" class="link-like">清除顏色</button>
+      </label>
+      <label id="hidden-label" class="row" hidden>
+        <input id="f-hidden" type="checkbox"> 在課表中隱藏這門課
+      </label>
+      <p id="editor-error" class="status message error" hidden></p>
+
+      <div class="actions">
+        <button id="btn-delete" type="button" class="danger" hidden>刪除</button>
+        <span class="spacer"></span>
+        <button id="btn-cancel" type="button">取消</button>
+        <button id="btn-save" type="button">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="slot-row-template">
+    <div class="slot-row">
+      <select class="f-day">
+        <option value="1">星期一</option>
+        <option value="2">星期二</option>
+        <option value="3">星期三</option>
+        <option value="4">星期四</option>
+        <option value="5">星期五</option>
+        <option value="6">星期六</option>
+        <option value="7">星期日</option>
+      </select>
+      <select class="f-mode">
+        <option value="period">用節次</option>
+        <option value="time">用時間</option>
+      </select>
+      <span class="period-inputs">
+        <select class="f-from"></select>
+        <span>到</span>
+        <select class="f-to"></select>
+      </span>
+      <span class="time-inputs" hidden>
+        <input class="f-start" type="time" value="19:00">
+        <span>到</span>
+        <input class="f-end" type="time" value="20:30">
+      </span>
+      <input class="f-room" type="text" placeholder="地點" maxlength="30">
+      <button type="button" class="link-like f-remove">移除</button>
+    </div>
+  </template>
 
   <script type="module" src="schedule.js"></script>
 </body>
