@@ -172,3 +172,23 @@ test('通識課的加選資料帶有類別與志願群組', () => {
     cos_id: '561068', cos_type_code: 'E', wType: 'E', wish: '1', category_type: 'DF91BC7C',
   })
 })
+
+test('registrationState 區分已選上與登記中', async () => {
+  const { registrationState } = await import('../src/lib/register.js')
+  // 有志願群組且 sFlag 是數字 → 登記中
+  assert.deepEqual(registrationState({ cos_id: '561068', sFlag: '1', GroupUID: '51CE2C18' }), { state: 'wish', wishNo: 1 })
+  // sFlag 是 F → 已選上，即使屬於志願群組
+  assert.deepEqual(registrationState({ cos_id: '515506', sFlag: 'F', GroupUID: 'CB7B23E2' }), { state: 'registered', wishNo: null })
+  assert.deepEqual(registrationState({ cos_id: '516700', sFlag: 'F', GroupUID: null }), { state: 'registered', wishNo: null })
+  // 沒有群組就算 sFlag 是數字也當成已選上
+  assert.deepEqual(registrationState({ cos_id: 'x', sFlag: '2', GroupUID: null }), { state: 'registered', wishNo: null })
+  assert.deepEqual(registrationState(null), { state: 'registered', wishNo: null })
+})
+
+test('describeRegistration 產生畫面文字', async () => {
+  const { describeRegistration } = await import('../src/lib/register.js')
+  assert.equal(describeRegistration({ sFlag: '1', GroupUID: 'G' }), '已登記（第 1 志願）')
+  assert.equal(describeRegistration({ sFlag: '3', GroupUID: 'G' }), '已登記（第 3 志願）')
+  assert.equal(describeRegistration({ sFlag: 'F', GroupUID: 'G' }), '已選上')
+  assert.equal(describeRegistration({ sFlag: 'F' }), '已選上')
+})

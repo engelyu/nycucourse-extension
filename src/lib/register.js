@@ -79,6 +79,20 @@ export function wishOptions(group, record) {
   return options
 }
 
+// 「已登記」和「已選上」不同：分發課程登記志願後 sFlag 會是志願序數字，
+// 等分發結果出來才會變成 F。
+export function registrationState(course) {
+  const sFlag = str(course && course.sFlag)
+  const group = str(course && course.GroupUID)
+  if (group && /^\d+$/.test(sFlag)) return { state: 'wish', wishNo: Number(sFlag) }
+  return { state: 'registered', wishNo: null }
+}
+
+export function describeRegistration(course) {
+  const { state, wishNo } = registrationState(course)
+  return state === 'wish' ? `已登記（第 ${wishNo} 志願）` : '已選上'
+}
+
 export function registerParams(record, wish) {
   return {
     cos_id: str(record && record.cos_id),

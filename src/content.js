@@ -99,6 +99,9 @@ async function courseLists() {
     menu_data: c.menu_data,
     category_type: c.category_type,
     category_cname: c.category_cname,
+    // 分發課程登記志願後 sFlag 是志願序，分發完成才是 F
+    sFlag: c.sFlag,
+    GroupUID: c.GroupUID,
   }))
   return { preregist: slim(preregist), registered: slim(registered) }
 }

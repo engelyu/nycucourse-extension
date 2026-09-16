@@ -1,4 +1,4 @@
-import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse } from './lib/register.js'
+import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse, registrationState, describeRegistration } from './lib/register.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 
@@ -7,7 +7,7 @@ const $ = (sel) => document.querySelector(sel)
 const state = {
   courses: [], // 預排課程（要加選的候選）
   menus: new Map(), // cosId -> 課程時間表的查詢條件
-  registered: new Set(), // 已正式選上的課號
+  registered: new Map(), // 課號 -> 選課網的紀錄（已選上或登記中）
   groups: {}, // 分發群組（志願序）
   checks: new Map(), // cosId -> { availability, record }
   pending: null, // 確認中的課程
@@ -47,14 +47,18 @@ async function load() {
   const { schedule, courseData } = await chrome.storage.local.get(['schedule', 'courseData'])
   const pre = schedule && schedule.sources && schedule.sources.preregist
   state.courses = (pre && pre.courses) || []
-  state.registered = new Set((((schedule || {}).sources || {}).registered || { courses: [] }).courses.map((c) => String(c.cos_id)))
+  const regCourses = (((schedule || {}).sources || {}).registered || { courses: [] }).courses || []
+  state.registered = new Map(regCourses.map((c) => [String(c.cos_id), c]))
   state.menus = new Map(((courseData && courseData.courses) || []).filter((c) => c.menu).map((c) => [c.id, c.menu]))
   renderStatus()
   render()
 }
 
 function renderStatus() {
-  const bits = [`預排 ${state.courses.length} 門`, `已選上 ${state.registered.size} 門`]
+  const all = [...state.registered.values()]
+  const wishCount = all.filter((c) => registrationState(c).state === 'wish').length
+  const bits = [`預排 ${state.courses.length} 門`, `已選上 ${all.length - wishCount} 門`]
+  if (wishCount) bits.push(`登記中 ${wishCount} 門`)
   const missing = state.courses.filter((c) => !menuForCourse(c, state.menus.get(String(c.cos_id)))).length
   if (missing) bits.push(`${missing} 門缺查詢資料，請重新同步或更新課程資料`)
   $('#status').textContent = bits.join('　|　')
@@ -62,9 +66,11 @@ function renderStatus() {
 
 function stateCell(cosId) {
   const span = document.createElement('span')
-  if (state.registered.has(cosId)) {
-    span.className = 'state-done'
-    span.textContent = '已選上'
+  const record = state.registered.get(cosId)
+  if (record) {
+    const { state: regState } = registrationState(record)
+    span.className = regState === 'wish' ? 'state-wish' : 'state-done'
+    span.textContent = describeRegistration(record)
     return span
   }
   const check = state.checks.get(cosId)
@@ -120,7 +126,20 @@ function render() {
 
     const act = document.createElement('td')
     act.className = 'actions-cell'
-    if (!state.registered.has(cosId)) {
+    const regRecord = state.registered.get(cosId)
+    const isWish = regRecord && registrationState(regRecord).state === 'wish'
+    if (isWish) {
+      // 登記中的課還可以改志願，和選課網一樣
+      const again = document.createElement('button')
+      again.type = 'button'
+      again.textContent = '改志願'
+      again.addEventListener('click', async () => {
+        const fresh = await checkCourse(course, again)
+        if (fresh && fresh.availability.canRegister) openConfirm(course, fresh)
+      })
+      act.append(again)
+    }
+    if (!regRecord) {
       const hasMenu = Boolean(menuForCourse(course, state.menus.get(cosId)))
       const btn = document.createElement('button')
       btn.type = 'button'
@@ -233,7 +252,8 @@ async function submit() {
     }
     const result = parseRegResult(reply.text)
     $('#confirm').close()
-    showMessage(`${course.cos_id} ${course.cos_cname}：${result.message}`, result.ok ? '' : 'error')
+    const done = result.ok && availability.needsWish ? `已登記第 ${wish} 志願` : result.message
+    showMessage(`${course.cos_id} ${course.cos_cname}：${done}`, result.ok ? '' : 'error')
     state.checks.delete(String(course.cos_id))
     state.groups = {}
     if (result.ok) await refreshRegistered()
@@ -266,7 +286,7 @@ async function refreshRegistered() {
     preregist: { semester: semesterOf(reply.preregist), updatedAt: now, courses: reply.preregist || [] },
   }
   await chrome.storage.local.set({ schedule: next })
-  state.registered = new Set((reply.registered || []).map((c) => String(c.cos_id)))
+  state.registered = new Map((reply.registered || []).map((c) => [String(c.cos_id), c]))
   state.courses = reply.preregist || []
 }
 

@@ -75,7 +75,8 @@ function itemElement(item) {
   title.textContent = item.title
   const sub = document.createElement('span')
   sub.className = 'sub'
-  sub.textContent = [item.room, item.teacher].filter(Boolean).join(' · ')
+  const wishTag = item.regState === 'wish' ? `登記中（第 ${item.wishNo} 志願）` : ''
+  sub.textContent = [item.room, item.teacher, wishTag].filter(Boolean).join(' · ')
   main.append(title, sub)
   main.title = [item.title, item.teacher, item.room, url ? '點擊開啟連結' : '尚未設定連結'].filter(Boolean).join('\n')
 

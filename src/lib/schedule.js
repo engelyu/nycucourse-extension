@@ -2,6 +2,7 @@
 // 或使用者自己新增的項目（外校課程、固定活動）。三種都用同一種格式。
 import { PERIODS, periodIndex, parseCosTime, DAY_NAMES } from './periods.js'
 import { courseOutlineUrl } from './links.js'
+import { registrationState } from './register.js'
 
 const str = (v) => (v == null ? '' : String(v))
 
@@ -38,6 +39,9 @@ export function courseToItem(course, { source, semester }) {
     limit: str(course.num_limit),
     enrolled: str(course.registered_num),
     note: str(course.memo),
+    // 分發課程可能只是登記中，還沒真的選上
+    regState: source === 'registered' ? registrationState(course).state : '',
+    wishNo: source === 'registered' ? registrationState(course).wishNo : null,
     slots: parseCosTime(course.cos_time),
   })
 }
