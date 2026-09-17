@@ -12,9 +12,15 @@
 
 ## 安裝
 
-Chrome Web Store 上架審查中，通過後會在這裡放連結，從商店安裝就會自動更新。
+### 從 Chrome 線上應用程式商店安裝（推薦）
 
-在那之前，可以用下面的方式先安裝：
+到 [Chrome 線上應用程式商店](https://chromewebstore.google.com/detail/looiljidkdllkbabaiamgeblekkdgfef) 按「加到 Chrome」。之後會自動更新。
+
+### 安裝 GitHub 最新版
+
+商店的新版本要等 Google 審查，通常比 GitHub 晚幾天到幾週。想馬上用到最新功能，可以改裝 GitHub 上的最新版：
+
+> 商店版和 GitHub 版**只能裝一個**。兩個都裝會出現兩個一樣的圖示，互相干擾。換版本前，先到 `chrome://extensions` 移除原本那個。課程資料和課表存在擴充功能裡，移除後要重新「更新課程資料」和「從選課網同步」。
 
 1. 到 [最新版下載頁](https://github.com/engelyu/nycucourse-extension/releases/latest)，下載 `nycucourse-extension-版本.zip`。
 2. 把 zip 解壓縮到一個**不會刪掉或移動**的資料夾，例如「文件」裡面。
@@ -25,9 +31,9 @@ Chrome Web Store 上架審查中，通過後會在這裡放連結，從商店安
 
 Edge、Brave 等以 Chrome 為基礎的瀏覽器通常也能用同樣方式安裝，但目前只在 Chrome 上測試過。手機瀏覽器不支援。
 
-### 更新到新版
+#### 更新 GitHub 版
 
-這種安裝方式不會自動更新。有新版時：
+GitHub 版不會自動更新。有新版時：
 
 1. 下載新版 zip，解壓縮後**覆蓋**原本的資料夾。
 2. 到 `chrome://extensions`，在「NYCU 預排課程匯入」按重新載入的圓形箭頭。
