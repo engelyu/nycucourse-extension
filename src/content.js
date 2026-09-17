@@ -65,12 +65,24 @@ async function currentSemester() {
   }
 }
 
-// 選課網目前的系統狀態與公告（例如非選課時段）。由伺服器決定，這裡不判斷時間。
+// 選課網的負載狀態（sysstatuslvl）。注意：分發暫停時它仍回「系統暢通無阻」，不能拿來判斷開不開放。
 async function sysStatus() {
   if (!tokenUsable(token(), Date.now())) return null
   const { status, text } = await post('sysstatuslvl', {})
   if (!isOk(status)) return null
   return parseSysStatus(text)
+}
+
+// 選課系統目前是否開放（checkreg）。暫停時回 { status: 'error', cmsg: '…暫停使用選課系統…' }。
+async function regStatus() {
+  if (!tokenUsable(token(), Date.now())) return null
+  const { status, text } = await post('checkreg', {})
+  if (!isOk(status) || !text.trim()) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
 }
 
 // 課表用：抓預排與正式選課的課程清單
@@ -227,6 +239,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     serial(courseLists).then(
       (lists) => sendResponse(lists ? { ok: true, ...lists } : { ok: false, reason: 'not_logged_in' }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'regstatus') {
+    serial(regStatus).then(
+      (json) => sendResponse({ ok: true, json }),
+      () => sendResponse({ ok: true, json: null }),
     )
     return true
   }

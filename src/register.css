@@ -5,6 +5,11 @@
   background: rgba(180, 83, 9, .08);
   font-size: 13px;
 }
+.warning.closed {
+  border-left-color: var(--error);
+  background: rgba(198, 40, 40, .08);
+  color: var(--error);
+}
 table { border-collapse: collapse; width: 100%; margin-top: 12px; }
 thead th {
   text-align: left;

@@ -2,6 +2,7 @@ import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseR
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
+import { parseRegStatus } from './lib/regstatus.js'
 
 const $ = (sel) => document.querySelector(sel)
 
@@ -14,6 +15,18 @@ const state = {
   pending: null, // 確認中的課程
   auto: { enabled: false, time: '13:00', items: [], log: [] }, // 每日自動登記設定
   autoNext: null, // 下次自動執行的時間
+  regStatus: { open: true, message: '' }, // 選課系統是否開放（checkreg）
+}
+
+// 讀選課系統是否暫停；暫停時顯示伺服器給的說明，並停用加選相關按鈕
+async function refreshRegStatus() {
+  const reply = await ask({ type: 'regstatus' })
+  state.regStatus = reply && reply.ok ? parseRegStatus(reply.json) : { open: true, message: '' }
+  const el = $('#closed')
+  el.textContent = state.regStatus.open ? '' : `選課系統暫停中：${state.regStatus.message}`
+  el.hidden = state.regStatus.open
+  render()
+  return state.regStatus
 }
 
 function setNote(el, text, kind = '') {
@@ -143,6 +156,7 @@ function render() {
       const again = document.createElement('button')
       again.type = 'button'
       again.textContent = '改志願'
+      again.disabled = !state.regStatus.open
       again.addEventListener('click', async () => {
         const fresh = await checkCourse(course, again)
         if (fresh && fresh.availability.canRegister) openConfirm(course, fresh)
@@ -154,7 +168,7 @@ function render() {
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.textContent = check && check.availability.canRegister ? (check.availability.needsWish ? '登記' : '加選') : '查詢'
-      btn.disabled = !hasMenu
+      btn.disabled = !hasMenu || !state.regStatus.open
       btn.title = hasMenu ? '' : '需要先在 popup 按「更新課程資料」，或到課表分頁重新同步'
       btn.addEventListener('click', () => (check && check.availability.canRegister ? openConfirm(course, check) : checkCourse(course, btn)))
       act.append(btn)
@@ -174,6 +188,14 @@ async function checkCourse(course, btn) {
   showMessage('')
   const reply = await ask({ type: 'reginfo', cosId, menu: menuForCourse(course, state.menus.get(cosId)) })
   if (!reply || !reply.ok) {
+    // 分發暫停時查詢會回空內容，看起來像沒登入；先確認是不是暫停
+    if (reply && reply.reason === 'not_logged_in') {
+      const status = await refreshRegStatus()
+      if (!status.open) {
+        showMessage(`選課系統暫停中：${status.message}`, 'error')
+        return null
+      }
+    }
     showMessage(replyProblem(reply), 'error')
     render()
     return null
@@ -454,7 +476,7 @@ function init() {
   })
   $('#btn-cancel').addEventListener('click', () => $('#confirm').close())
   $('#btn-submit').addEventListener('click', submit)
-  load().then(loadAuto)
+  load().then(loadAuto).then(refreshRegStatus)
 }
 
 init()

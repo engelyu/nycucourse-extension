@@ -4,6 +4,7 @@ import { describeCrawl } from './lib/crawlState.js'
 import { formatSeats } from './lib/seats.js'
 import { courseOutlineUrl } from './lib/links.js'
 import { parseDeptCounts, menusToFetch, mergeCounts, countsFresh } from './lib/counts.js'
+import { parseRegStatus, sysStatusNotice } from './lib/regstatus.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -19,7 +20,8 @@ const state = {
   reloading: false, // 正在重新整理選課網
   needsReload: false, // 有新加入的課，提示重新整理
   cosSemester: null, // 選課網目前學期
-  sysStatus: null, // 選課網系統公告（例如非選課時段）
+  sysStatus: null, // 選課網負載狀態（sysstatuslvl）
+  regStatus: null, // 選課系統是否開放（checkreg）
   counts: {}, // dep_uid -> { at, counts }：即時選課人數的快取
   courseData: undefined,
   crawlState: undefined,
@@ -186,21 +188,32 @@ async function refreshCosSemester() {
   renderSemesterWarning()
 }
 
-// 讀選課網的系統狀態；有公告就顯示，例如非選課時段或系統維護。
+// 讀選課系統是否暫停（checkreg）與負載狀態（sysstatuslvl）。
+// 暫停訊息由伺服器提供，例如「分發時間 10:00～12:00 暫停使用選課系統」。
 async function refreshSysStatus() {
   if (!state.tab || !state.cosReady) return
   try {
-    const reply = await chrome.tabs.sendMessage(state.tab.id, { type: 'sysstatus' })
-    state.sysStatus = reply && reply.status ? reply.status : null
+    const [reg, sys] = await Promise.all([
+      chrome.tabs.sendMessage(state.tab.id, { type: 'regstatus' }),
+      chrome.tabs.sendMessage(state.tab.id, { type: 'sysstatus' }),
+    ])
+    state.regStatus = parseRegStatus(reg && reg.json)
+    state.sysStatus = sys && sys.status ? sys.status : null
   } catch {
+    state.regStatus = null
     state.sysStatus = null
   }
   renderSysStatus()
 }
 
 function renderSysStatus() {
-  const s = state.sysStatus
-  showHint($('#sys-status'), s && s.message ? `選課網公告：${s.message}` : '', 'warn')
+  const closed = state.regStatus && !state.regStatus.open
+  if (closed) {
+    showHint($('#sys-status'), `選課系統暫停中：${state.regStatus.message}`, 'error')
+    return
+  }
+  const notice = sysStatusNotice(state.sysStatus)
+  showHint($('#sys-status'), notice ? `選課網狀態：${notice}` : '', 'warn')
 }
 
 // 課程資料學期與選課網學期不同時提醒：課號在不同學期可能對應不同課程。
@@ -433,7 +446,7 @@ async function fetchCounts() {
   try {
     const reply = await send(state.tab.id, { type: 'deptcounts', menus })
     if (!reply || !reply.ok) {
-      showHint($('#search-summary'), reply && reply.reason === 'not_logged_in' ? '請先登入選課網。' : '查人數失敗，請稍後再試。', 'error')
+      showHint($('#search-summary'), reply && reply.reason === 'not_logged_in' ? `${await unavailableMessage()}。` : '查人數失敗，請稍後再試。', 'error')
       return
     }
     const now = Date.now()
@@ -450,6 +463,13 @@ async function fetchCounts() {
     btn.disabled = !state.cosReady
     btn.textContent = '查人數'
   }
+}
+
+// 選課網回空內容時，可能是登入過期，也可能是分發時段暫停；先查清楚再說
+async function unavailableMessage() {
+  await refreshSysStatus()
+  if (state.regStatus && !state.regStatus.open) return `選課系統暫停中：${state.regStatus.message}`
+  return '請先登入選課網'
 }
 
 async function addSingle(id) {
@@ -469,7 +489,7 @@ async function addSingle(id) {
       renderTabBar()
     }
   } else if (reply && reply.reason === 'not_logged_in') {
-    state.addStatus.set(id, { status: 'error', msg: '請先登入選課網' })
+    state.addStatus.set(id, { status: 'error', msg: await unavailableMessage() })
   } else {
     state.addStatus.set(id, { status: 'error', msg: (reply && reply.detail) || '未知錯誤' })
   }
@@ -529,7 +549,7 @@ async function onBulkImport() {
     return
   }
   if (!reply || !reply.ok) {
-    if (reply && reply.reason === 'not_logged_in') showHint(hint, '請先登入選課網。', 'error')
+    if (reply && reply.reason === 'not_logged_in') showHint(hint, `${await unavailableMessage()}。`, 'error')
     else showHint(hint, `選課網回應失敗：${(reply && reply.detail) || '未知錯誤'}`, 'error')
     btn.disabled = false
     return

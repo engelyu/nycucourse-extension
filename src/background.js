@@ -3,6 +3,7 @@ import { crawlSemester } from './lib/crawl.js'
 import { isCrawlAlive, createStateWriter } from './lib/crawlState.js'
 import { nextRunAt, buildPlan, summarizeResults } from './lib/autoreg.js'
 import { parseRegInfo, describeAvailability, registerParams, parseRegResult, menuForCourse } from './lib/register.js'
+import { parseRegStatus } from './lib/regstatus.js'
 
 const BASE = 'https://timetable.nycu.edu.tw/?r=main/'
 const REQUEST_TIMEOUT_MS = 30_000
@@ -130,6 +131,11 @@ async function runAutoRegister(trigger = 'alarm') {
 
   const tab = await ensureCosTab()
   if (!tab) return finish([], '找不到可用的選課網分頁，請先登入選課網')
+
+  // 分發暫停時不要送出任何東西，直接記下學校給的說明
+  const reg = await askTab(tab.id, { type: 'regstatus' })
+  const regStatus = parseRegStatus(reg && reg.ok ? reg.json : null)
+  if (!regStatus.open) return finish([], `選課系統暫停中：${regStatus.message}`)
 
   const lists = await askTab(tab.id, { type: 'courses' })
   if (!lists || !lists.ok) {
