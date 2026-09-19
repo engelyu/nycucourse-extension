@@ -132,8 +132,6 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .sort-label { white-space: nowrap; font-size: 13px; color: var(--muted); }
 
 /* 右欄：固定在畫面上自己捲動；篩選面板蓋在課表上 */
-/* Task 4 才會畫真正的課表，這裡先保留高度，讓篩選面板（絕對定位、蓋滿右欄）有地方展開 */
-.timetable { min-height: 420px; }
 .plan-pane { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
 .filter-panel { position: absolute; inset: 0; z-index: 3; overflow-y: auto; padding: 0 4px 12px; background: Canvas; }
 .filter-panel[hidden] { display: none; }
@@ -141,6 +139,12 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .panel-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 6px 0; background: Canvas; border-bottom: 1px solid var(--line); }
 .panel-head h2 { margin: 0; font-size: 16px; }
 .panel-block h3 { margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
+
+@media (min-width: 900px) {
+  /* 面板開著時，絕對定位的它跟著 .plan-pane 的內容高度走；#timetable 現在還是空的（Task 4 才畫），
+     撐到滿版高度，面板才有整個視窗高可以用、內容自己捲動，而不是被卡在課表目前的高度 */
+  .plan-pane:has(.filter-panel:not([hidden])) { min-height: calc(100vh - 24px); }
+}
 
 @media (max-width: 899px) {
   .layout { grid-template-columns: 1fr; }
