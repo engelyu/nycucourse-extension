@@ -192,3 +192,95 @@ test('describeRegistration 產生畫面文字', async () => {
   assert.equal(describeRegistration({ sFlag: 'F', GroupUID: 'G' }), '已選上')
   assert.equal(describeRegistration({ sFlag: 'F' }), '已選上')
 })
+
+// 2026-09-19 實測：擴充功能加入的預排 menu_data 是 {}，選課網用它查不到課
+test('parseMenuData 把空的 {} 當成沒有路徑', async () => {
+  const { parseMenuData, menuForCourse } = await import('../src/lib/register.js')
+  assert.equal(parseMenuData('{}'), null)
+  const crawlMenu = { type: '1', dep_category: '3*', college_no: 'I', dep_uid: 'DEP' }
+  assert.deepEqual(menuForCourse({ menu_data: '{}', category_type: '' }, crawlMenu), { ...crawlMenu, category_type: '' })
+})
+
+// 取自 getdep 的真實結構：學士班共同課程 > 院共同課程 > 全部 > 電機系共同課程 > 各課程群組
+const depTree = [
+  { label: '學士班課程', value: '1', children: [] },
+  {
+    label: '學士班共同課程',
+    value: '3',
+    children: [
+      {
+        label: '院共同課程',
+        value: '0C',
+        children: [
+          {
+            label: '全部',
+            value: '*',
+            children: [
+              {
+                label: '電機系共同課程',
+                value: 'EE',
+                children: [
+                  { label: '機率', value: '機率' },
+                  { label: '線性代數', value: '線性代數' },
+                  { label: '電路學', value: '電路學' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]
+
+test('groupMenus 依系所代碼找出選課網的課程群組路徑，課名相符的排前面', async () => {
+  const { groupMenus } = await import('../src/lib/register.js')
+  const menus = groupMenus(depTree, 'EE', '線性代數')
+  assert.equal(menus.length, 3)
+  assert.deepEqual(menus[0], { type: '3', dep_category: '0C', college_no: '*', dep_uid: 'EE', group: '線性代數', grade: '', class: '' })
+  assert.deepEqual(groupMenus(depTree, 'NOPE', '線性代數'), [])
+  assert.deepEqual(groupMenus(null, 'EE', 'x'), [])
+})
+
+test('resolveRegInfo 課程時間表路徑查不到時改試選課網的課程群組', async () => {
+  const { resolveRegInfo } = await import('../src/lib/register.js')
+  const course = { cos_id: '515044', cos_cname: '線性代數', menu_data: '{}', category_type: '' }
+  const timetableMenu = { type: '1', dep_category: '3*', college_no: 'I', dep_uid: 'EE' }
+  const asked = []
+  const askRegInfo = async (menu) => {
+    asked.push(menu.group ?? '(timetable)')
+    if (menu.group === '線性代數') return { ok: true, json: { 515044: { status: 'error', cmsg: '未開放', cos_type_code: '1' } } }
+    return { ok: true, json: [] }
+  }
+  const result = await resolveRegInfo({ course, timetableMenu, askRegInfo, getDepTree: async () => depTree })
+  assert.equal(result.ok, true)
+  assert.equal(result.record.cmsg, '未開放')
+  assert.deepEqual(asked, ['(timetable)', '線性代數'])
+})
+
+test('resolveRegInfo 第一次就查到時不讀系所樹；連線失敗直接回傳', async () => {
+  const { resolveRegInfo } = await import('../src/lib/register.js')
+  const course = { cos_id: '1', menu_data: '{}', category_type: '' }
+  const timetableMenu = { type: '1', dep_uid: 'EE' }
+  let treeCalls = 0
+  const getDepTree = async () => { treeCalls++; return depTree }
+  const found = await resolveRegInfo({ course, timetableMenu, askRegInfo: async () => ({ ok: true, json: { 1: { status: 'success' } } }), getDepTree })
+  assert.equal(found.record.status, 'success')
+  assert.equal(treeCalls, 0)
+  const failed = await resolveRegInfo({ course, timetableMenu, askRegInfo: async () => ({ ok: false, reason: 'not_logged_in' }), getDepTree })
+  assert.deepEqual(failed, { ok: false, reason: 'not_logged_in' })
+  const none = await resolveRegInfo({ course: { cos_id: '2', menu_data: '{}' }, timetableMenu: null, askRegInfo: async () => ({ ok: true, json: [] }), getDepTree })
+  assert.equal(none.ok, false)
+  assert.equal(none.reason, 'no_menu')
+})
+
+test('resolveRegInfo 預排自帶路徑時只查一次，不猜其他路徑', async () => {
+  const { resolveRegInfo } = await import('../src/lib/register.js')
+  const course = { cos_id: '561068', menu_data: '{"type":3,"dep_uid":"CORE","group":"Z10[0-4]"}', category_type: 'CAT' }
+  const asked = []
+  const result = await resolveRegInfo({ course, timetableMenu: { type: '1', dep_uid: 'EE' }, askRegInfo: async (m) => { asked.push(m); return { ok: true, json: [] } }, getDepTree: async () => depTree })
+  assert.equal(asked.length, 1)
+  assert.equal(asked[0].category_type, 'CAT')
+  assert.equal(result.ok, true)
+  assert.equal(result.record, null)
+})

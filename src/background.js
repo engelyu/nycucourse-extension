@@ -2,7 +2,7 @@
 import { crawlSemester } from './lib/crawl.js'
 import { isCrawlAlive, createStateWriter } from './lib/crawlState.js'
 import { nextRunAt, buildPlan, summarizeResults } from './lib/autoreg.js'
-import { parseRegInfo, describeAvailability, registerParams, parseRegResult, menuForCourse } from './lib/register.js'
+import { describeAvailability, registerParams, parseRegResult, resolveRegInfo } from './lib/register.js'
 import { parseRegStatus } from './lib/regstatus.js'
 
 const BASE = 'https://timetable.nycu.edu.tw/?r=main/'
@@ -144,6 +144,11 @@ async function runAutoRegister(trigger = 'alarm') {
   const registered = Object.fromEntries((lists.registered || []).map((c) => [String(c.cos_id), c]))
   const preregist = Object.fromEntries((lists.preregist || []).map((c) => [String(c.cos_id), c]))
   const plan = buildPlan(cfg.items, registered)
+  // 用擴充功能加入的預排沒有選課網路徑，要靠課程時間表的系所路徑查
+  const { courseData } = await chrome.storage.local.get('courseData')
+  const menus = new Map(((courseData && courseData.courses) || []).filter((c) => c.menu).map((c) => [String(c.id), c.menu]))
+  let depTreePromise = null
+  const getDepTree = () => (depTreePromise ||= askTab(tab.id, { type: 'deptree' }).then((r) => (r && r.ok ? r.tree : null)))
 
   const results = []
   for (const item of plan.todo) {
@@ -152,12 +157,17 @@ async function runAutoRegister(trigger = 'alarm') {
       results.push({ ...item, ok: false, message: '不在預排課程裡' })
       continue
     }
-    const info = await askTab(tab.id, { type: 'reginfo', cosId: item.cosId, menu: menuForCourse(course, null) })
+    const info = await resolveRegInfo({
+      course,
+      timetableMenu: menus.get(item.cosId),
+      askRegInfo: (menu) => askTab(tab.id, { type: 'reginfo', cosId: item.cosId, menu }),
+      getDepTree,
+    })
     if (!info || !info.ok) {
-      results.push({ ...item, ok: false, message: '查詢失敗' })
+      results.push({ ...item, ok: false, message: info && info.reason === 'no_menu' ? '缺少查詢資料，請先更新課程資料' : '查詢失敗' })
       continue
     }
-    const record = parseRegInfo(info.json, item.cosId)
+    const record = info.record
     const availability = describeAvailability(record)
     if (!availability.canRegister) {
       results.push({ ...item, ok: false, message: availability.message || '選課網不允許登記' })

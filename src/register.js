@@ -1,4 +1,4 @@
-import { parseRegInfo, describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse, registrationState, describeRegistration } from './lib/register.js'
+import { describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse, resolveRegInfo, registrationState, describeRegistration } from './lib/register.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
@@ -62,6 +62,7 @@ function replyProblem(reply) {
   if (reply.reason === 'no_tab') return '找不到選課網分頁，請先開啟並登入選課網。'
   if (reply.reason === 'no_content_script') return '選課網分頁沒有回應，請重新整理該分頁。'
   if (reply.reason === 'not_logged_in') return '請先登入選課網。'
+  if (reply.reason === 'no_menu') return '缺少這門課的查詢資料，請在 popup 按「更新課程資料」後再試。'
   return reply.detail || '選課網沒有回應'
 }
 
@@ -186,7 +187,12 @@ async function checkCourse(course, btn) {
     btn.textContent = '查詢中…'
   }
   showMessage('')
-  const reply = await ask({ type: 'reginfo', cosId, menu: menuForCourse(course, state.menus.get(cosId)) })
+  const reply = await resolveRegInfo({
+    course,
+    timetableMenu: state.menus.get(cosId),
+    askRegInfo: (menu) => ask({ type: 'reginfo', cosId, menu }),
+    getDepTree: getDepTree,
+  })
   if (!reply || !reply.ok) {
     // 分發暫停時查詢會回空內容，看起來像沒登入；先確認是不是暫停
     if (reply && reply.reason === 'not_logged_in') {
@@ -200,12 +206,24 @@ async function checkCourse(course, btn) {
     render()
     return null
   }
-  const record = parseRegInfo(reply.json, cosId)
+  const record = reply.record
   const availability = describeAvailability(record)
   state.checks.set(cosId, { record, availability })
   if (availability.needsWish) await loadGroups()
   render()
   return state.checks.get(cosId)
+}
+
+let depTreePromise = null
+function getDepTree() {
+  if (!depTreePromise) {
+    depTreePromise = ask({ type: 'deptree' }).then((reply) => {
+      if (reply && reply.ok) return reply.tree
+      depTreePromise = null
+      return null
+    })
+  }
+  return depTreePromise
 }
 
 async function loadGroups() {

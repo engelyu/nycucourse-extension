@@ -147,6 +147,18 @@ async function wishGroups() {
   return JSON.parse(text)
 }
 
+// 選課網的系所樹（含院共同、校共同課程的課程群組），同一頁面只抓一次
+let depTreeCache = null
+async function depTree() {
+  if (depTreeCache) return depTreeCache
+  if (!tokenUsable(token(), Date.now())) return null
+  const { status, text } = await post('getdep', { lang: 'tw' })
+  if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+  if (!text.trim()) return null
+  depTreeCache = JSON.parse(text)
+  return depTreeCache
+}
+
 // 正式選課：送出加選。呼叫端要先確認過，這裡只負責送出並回傳原始回應。
 async function register(params) {
   if (!tokenUsable(token(), Date.now())) return null
@@ -217,6 +229,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'reginfo') {
     serial(() => regInfo({ cosId: message.cosId, menu: message.menu })).then(
       (json) => sendResponse(json === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, json }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'deptree') {
+    serial(depTree).then(
+      (tree) => sendResponse(tree === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, tree }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
