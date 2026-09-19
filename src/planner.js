@@ -2,7 +2,7 @@
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
 import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
-import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution } from './lib/attribution.js'
+import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution, restoreParams } from './lib/attribution.js'
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
@@ -11,6 +11,7 @@ import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
 import { createFilterPanel } from './planner/filter-panel.js'
 import { createTimetable } from './planner/timetable.js'
+import { createCourseDetail } from './planner/course-detail.js'
 
 const $ = (sel) => document.querySelector(sel)
 const VALID = new Set(ALL_SLOTS)
@@ -214,6 +215,11 @@ function readFilters() {
 // ---------- 結果 ----------
 
 function renderResults() {
+  drawResults()
+  if (detail) detail.refresh()
+}
+
+function drawResults() {
   const list = courses()
   if (panel) panel.setCount(appliedCount(state.filters, state.selection))
   const summary = $('#summary')
@@ -426,10 +432,60 @@ function renderLegend(legend) {
   )
 }
 
-// ---------- 初始化 ----------
+// ---------- 課表上的課：詳情、移除預排 ----------
 
-// 詳情小卡：Task 5 才會換成真的
-function openDetail() {}
+let detail = null
+let toastTimer = null
+
+function openDetail(item, anchor) {
+  detail.open(item, anchor)
+}
+
+function showToast(text, action) {
+  const toast = $('#toast')
+  toast.replaceChildren(document.createTextNode(text))
+  if (action) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'link'
+    b.textContent = action.label
+    b.addEventListener('click', () => {
+      toast.hidden = true
+      action.run()
+    })
+    toast.append('・', b)
+  }
+  toast.hidden = false
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => (toast.hidden = true), 10_000)
+}
+
+// 從預排移除：content script 會先確認不是正式選課的課；成功後可以復原（用原本的採計方式加回去）
+async function removeFromPrereg(item) {
+  const record = preregItem(item.cosId)
+  const reply = await askCos({ type: 'removepreregist', cosId: item.cosId })
+  if (!reply || !reply.ok) return showToast(needsCos(reply) ? '請先開啟並登入選課網' : cosProblem(reply))
+  if (!reply.removed) return showToast(reply.msg)
+  const { schedule } = await chrome.storage.local.get('schedule')
+  const src = schedule && schedule.sources && schedule.sources.preregist
+  if (src) {
+    src.courses = (src.courses || []).filter((c) => String(c.cos_id) !== String(item.cosId))
+    await chrome.storage.local.set({ schedule })
+  }
+  showToast(`已從預排移除 ${item.title}`, record ? { label: '復原', run: () => restorePrereg(item, record) } : null)
+  syncStatus()
+}
+
+async function restorePrereg(item, record) {
+  const id = String(item.cosId)
+  const reply = await askCos({ type: 'import', ids: [id], params: { [id]: restoreParams(record) } })
+  const result = reply && reply.ok && reply.results && reply.results[0]
+  if (result && (result.status === 'added' || result.status === 'exists')) showToast(`已復原 ${item.title}`)
+  else showToast(`復原失敗：${result ? result.msg || '加入失敗' : cosProblem(reply)}。請到選課網重新加入。`)
+  syncStatus()
+}
+
+// ---------- 初始化 ----------
 
 function render() {
   grid.render(state.selection, occupiedKinds(state.schedule))
@@ -447,6 +503,15 @@ async function init() {
   state.courseData = stored.courseData || null
   grid = createSlotGrid($('#grid'), { onChange: setSelection })
   timetable = createTimetable($('#timetable'), { note: $('#hidden-note'), onOpen: openDetail })
+  detail = createCourseDetail($('#detail'), {
+    semester: () => (state.courseData && state.courseData.semester) || '',
+    status: (id) => courseStatuses(state.schedule).get(String(id)),
+    findCourse: (id) => courses().find((c) => String(c.id) === String(id)) || null,
+    queryState: (id) => addState.get(String(id)),
+    onQuery: queryCourse,
+    onRegister: registerCourse,
+    onRemove: removeFromPrereg,
+  })
   dialog = createRegisterDialog()
   panel = createFilterPanel({
     panel: $('#filter-panel'),
