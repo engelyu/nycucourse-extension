@@ -216,3 +216,10 @@ test('多系合開的課合併各系的類別代碼', async () => {
   const r = await crawlSemester({ fetchJson, concurrency: 1 })
   assert.deepEqual(r.courses.find((x) => x.id === '000002').brief.sort(), ['Z102', 'Z204'])
 })
+
+test('記下課程出現的所有系所名稱（多系合開）', async () => {
+  const { fetchJson } = fakeServer()
+  const r = await crawlSemester({ fetchJson, concurrency: 1 })
+  assert.deepEqual(r.courses.find((x) => x.id === '000002').deps.sort(), ['A', 'B'])
+  assert.deepEqual(r.courses.find((x) => x.id === '000003').deps, ['B'])
+})

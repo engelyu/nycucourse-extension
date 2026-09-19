@@ -67,6 +67,30 @@ export function courseCategories(course) {
   return out
 }
 
+// 系所名稱整理：課程時間表的名稱常是「(醫學系)」「IBI(生物資訊及系統生物研究所)[碩]」，
+// 去掉外層括號、英文縮寫與碩博標記，同一個研究所的碩士班、博士班合成一項
+export function depLabel(name) {
+  let s = str(name).trim().replace(/\[[^\]]*\]$/, '').trim()
+  const wrapped = /^[A-Za-z0-9 .&'-]*\((.+)\)$/.exec(s)
+  if (wrapped) s = wrapped[1].trim()
+  return s
+}
+
+// 這門課出現的所有系所（主開系所＋課程時間表上列出它的系所），整理過名稱並去重
+export function courseDeps(course) {
+  const names = [...((course && course.deps) || []), str(course && course.dep)]
+  return unique(names.map(depLabel).filter(Boolean))
+}
+
+// 系所清單與各有幾門課，門數多的在前
+export function depCounts(courses) {
+  const counts = new Map()
+  for (const course of courses || []) for (const d of courseDeps(course)) counts.set(d, (counts.get(d) || 0) + 1)
+  return [...counts]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh-Hant'))
+}
+
 export const hasBriefData = (courses) => (courses || []).some((c) => Array.isArray(c.brief) && c.brief.length)
 
 // ['1-5','1-6','3-3'] -> '一 56、三 3'
@@ -130,7 +154,7 @@ export function findCourses(courses, filters) {
   for (const course of courses || []) {
     if (excluded.has(str(course.id))) continue
     if (keywordIds && !keywordIds.has(course.id)) continue
-    if (deps.size && !deps.has(course.dep)) continue
+    if (deps.size && !courseDeps(course).some((d) => deps.has(d))) continue
     const credit = Number(course.credit)
     if (Number.isFinite(credit) && (credit < min || credit > max)) continue
     if (categories.size && !courseCategories(course).some((c) => categories.has(c))) continue

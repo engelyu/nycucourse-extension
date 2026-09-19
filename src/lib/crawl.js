@@ -63,6 +63,8 @@ export async function crawlSemester({
   const seenDeps = new Set()
   // 記下每個系所的查詢條件，之後要向選課網查人數時用得到
   const depMenus = new Map()
+  // 系所名稱，記在每門課上，找空堂的系所篩選用
+  const depNames = new Map()
   // 讀系所清單時每個請求後都回報，背景程式才會持續更新狀態，不會被判定為中斷
   const treeTick = () => onProgress({ phase: 'tree', done: depUids.length, total: 0 })
 
@@ -80,8 +82,10 @@ export async function crawlSemester({
       const colleges = objectKeys(await post('get_college', { ftype: type.uid, ...base, fcategory }))
       treeTick()
       for (const fcollege of colleges.length ? colleges : ['*']) {
-        const deps = objectKeys(await post('get_dep', { ftype: type.uid, ...base, fcategory, fcollege }))
+        const depList = await post('get_dep', { ftype: type.uid, ...base, fcategory, fcollege })
+        const deps = objectKeys(depList)
         for (const uid of deps) {
+          if (!depNames.has(uid) && typeof depList[uid] === 'string') depNames.set(uid, depList[uid].trim())
           if (seenDeps.has(uid)) continue
           seenDeps.add(uid)
           depUids.push(uid)
@@ -102,8 +106,10 @@ export async function crawlSemester({
   const { failures: failedDeps, lastError } = await pool(depUids, concurrency, async (uid, isStopped) => {
     const json = await withRetry(() => post('get_cos_list', cosListParams(semester, uid)), uid, { retryDelayMs, sleep, isStopped })
     if (isStopped()) return
+    const depName = depNames.get(uid) || ''
     for (const course of parseCosList(json, depMenus.get(uid))) {
       if (!course.id) continue
+      if (depName) course.deps = [depName]
       // 多系合開的課會出現在好幾個系所，全部記下來：選課網只在其中一個系所列出這門課
       const seen = courses.get(course.id)
       if (!seen) {
@@ -112,6 +118,7 @@ export async function crawlSemester({
       }
       if (course.menu && !seen.menus.some((m) => m.dep_uid === course.menu.dep_uid)) seen.menus.push(course.menu)
       if (course.brief) seen.brief = [...new Set([...(seen.brief || []), ...course.brief])]
+      if (course.deps) seen.deps = [...new Set([...(seen.deps || []), ...course.deps])]
     }
     done++
     onProgress({ phase: 'courses', done, total: depUids.length })

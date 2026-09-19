@@ -12,6 +12,8 @@
 
 ## Global Constraints
 
+- Update during Task 6 (user decision): the department filter is a searchable multi-select (`src/planner/dept-picker.js`). Selected departments show as chips on top and are pinned first in the list; the rest are sorted by course count; it has no default department and is remembered. The crawl records every listing department name in `course.deps`. `lib/freeslots.js` adds `depLabel`, `courseDeps` and `depCounts`, and the filter matches any of `courseDeps(course)`.
+
 - Update after checkpoint A (user decision): result sorting is user-selectable via `filters.sort` with `SORT_OPTIONS` from `lib/freeslots.js`: `fit` (default, fewest outside slots first), `time`, `id`, `credit` (desc), `dep`. Task 6 adds a `排序` select to the filters form and passes `sort` through `state.filters`.
 
 - The page is a full Chrome tab (`src/planner.html`) titled 「選課規劃」. The popup shell gets a button 「規劃 ↗」 that opens it.

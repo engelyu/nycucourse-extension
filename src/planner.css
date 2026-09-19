@@ -50,3 +50,44 @@ button { font: inherit; padding: 4px 10px; cursor: pointer; }
 .slot-grid .cell.drag-remove { background: rgba(127, 127, 127, .3); border-style: dashed; }
 .slot-grid .cell.preview-in { box-shadow: inset 0 0 0 2px var(--accent); }
 .slot-grid .cell.preview-out { box-shadow: inset 0 0 0 2px var(--error); }
+
+/* 篩選 */
+.filters { display: grid; gap: 8px; margin-top: 16px; font-size: 13px; }
+.filters fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.filters legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
+.filters label { white-space: nowrap; }
+.filters .spacer { flex: 1; }
+.filters input[type="number"] { width: 64px; }
+.filters input[type="search"] { flex: 1; min-width: 180px; }
+.filters .hint { flex-basis: 100%; margin: 0; font-size: 12px; }
+
+/* 系所多選 */
+.dept-picker { display: grid; gap: 6px; width: 100%; }
+.dept-picker .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 24px; }
+.dept-picker .chip { padding: 1px 8px; border: 1px solid var(--accent); border-radius: 999px; background: var(--sel); font-size: 12px; }
+.dept-picker .dept-search { width: 100%; box-sizing: border-box; padding: 4px 8px; font: inherit; }
+.dept-picker .dept-list { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+.dept-picker .dept-list li label { display: flex; gap: 6px; align-items: center; padding: 2px 8px; cursor: pointer; }
+.dept-picker .dept-list li label:hover { background: rgba(127, 127, 127, .1); }
+.dept-picker .dept-list li[aria-selected="true"] label { font-weight: 600; }
+.dept-picker .dept-list .name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.dept-picker .dept-list .count { color: var(--muted); font-size: 12px; }
+.dept-picker .dept-list .divider { border-top: 1px solid var(--line); margin: 2px 0; }
+.dept-picker .dept-list .empty { padding: 4px 8px; }
+
+/* 結果 */
+.summary { font-weight: 600; margin: 0 0 6px; }
+.right h2 { font-size: 14px; margin: 14px 0 6px; }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.card { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.card:hover { border-color: var(--accent); }
+.card .info { flex: 1; min-width: 0; }
+.card .title { font-weight: 600; color: inherit; text-decoration: none; }
+.card a.title:hover { text-decoration: underline; }
+.card .meta { font-size: 12px; color: var(--muted); }
+.card .outside { font-size: 12px; color: var(--error); }
+.card .actions { display: flex; gap: 6px; align-items: center; }
+.card .ok { color: var(--ok); font-size: 12px; }
+.card .error { color: var(--error); font-size: 12px; }
+.card .choices { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 12px; color: var(--muted); }
+button.link { background: none; border: none; padding: 0 2px; color: var(--muted); text-decoration: underline; font-size: 12px; }

@@ -115,3 +115,31 @@ test('findCourses 排序：預設最貼合（超出少的在前），也可以�
   assert.deepEqual(ids(findCourses(list, { ...o, sort: 'credit' }).overlap), ['202', '203', '201'])
   assert.deepEqual(ids(findCourses(list, { ...o, sort: 'dep' }).overlap), ['202', '201', '203'])
 })
+
+test('depLabel 整理系所名稱：去掉括號、英文縮寫與碩博標記', async () => {
+  const { depLabel } = await import('../src/lib/freeslots.js')
+  assert.equal(depLabel('(醫學系)'), '醫學系')
+  assert.equal(depLabel('IBI(生物資訊及系統生物研究所)[碩]'), '生物資訊及系統生物研究所')
+  assert.equal(depLabel('IOM(管理學院專班(共同課程))[碩]'), '管理學院專班(共同課程)')
+  assert.equal(depLabel('BME(生物醫學工程學系)'), '生物醫學工程學系')
+  assert.equal(depLabel('通識'), '通識')
+  assert.equal(depLabel('外文系:電影研究學分學程'), '外文系:電影研究學分學程')
+})
+
+test('courseDeps 合併主開系所與所有出現的系所；系所篩選比對任一個', async () => {
+  const { courseDeps, depCounts } = await import('../src/lib/freeslots.js')
+  const shared = c('300', 'F34-A1[GF]', { dep: '醫學系', deps: ['(醫學系)', '通識', '核心課程'] })
+  assert.deepEqual(courseDeps(shared), ['醫學系', '通識', '核心課程'])
+  assert.deepEqual(courseDeps(c('301', 'F34-A1[GF]')), ['資工系'])
+  const list = [shared, c('301', 'F34-A1[GF]'), c('302', 'F34-A1[GF]', { dep: '', deps: ['IBI(生資所)[碩]', 'IBI(生資所)[博]'] })]
+  assert.deepEqual(ids(findCourses(list, { ...base, deps: ['通識'] }).inside), ['300'])
+  assert.deepEqual(ids(findCourses(list, { ...base, deps: ['生資所', '資工系'] }).inside), ['301', '302'])
+  // 門數一樣時依中文排序規則（筆畫）
+  assert.deepEqual(depCounts(list), [
+    { name: '生資所', count: 1 },
+    { name: '核心課程', count: 1 },
+    { name: '通識', count: 1 },
+    { name: '資工系', count: 1 },
+    { name: '醫學系', count: 1 },
+  ])
+})
