@@ -108,9 +108,10 @@ export async function crawlSemester({
       const seen = courses.get(course.id)
       if (!seen) {
         courses.set(course.id, { ...course, menus: course.menu ? [course.menu] : [] })
-      } else if (course.menu && !seen.menus.some((m) => m.dep_uid === course.menu.dep_uid)) {
-        seen.menus.push(course.menu)
+        continue
       }
+      if (course.menu && !seen.menus.some((m) => m.dep_uid === course.menu.dep_uid)) seen.menus.push(course.menu)
+      if (course.brief) seen.brief = [...new Set([...(seen.brief || []), ...course.brief])]
     }
     done++
     onProgress({ phase: 'courses', done, total: depUids.length })

@@ -31,8 +31,8 @@ function fakeServer({ failDep = null, failTimes = 0 } = {}) {
           throw new Error('boom')
         }
         const data = {
-          'DEP-A': { 1: { '1142_000001': course('000001', '甲'), '1142_000002': course('000002', '乙') } },
-          'DEP-B': { 1: { '1142_000002': course('000002', '乙') }, 2: { '1142_000003': course('000003', '丙') } },
+          'DEP-A': { 1: { '1142_000001': course('000001', '甲'), '1142_000002': course('000002', '乙') }, brief: { '1142_000002': { Z102: {} } } },
+          'DEP-B': { 1: { '1142_000002': course('000002', '乙') }, 2: { '1142_000003': course('000003', '丙') }, brief: { '1142_000002': { Z204: {} } } },
           'DEP-C': [],
         }
         const v = data[p.m_dep_uid]
@@ -209,4 +209,10 @@ test('多系合開的課記下所有出現過的系所', async () => {
   assert.equal(shared.menu.dep_uid, shared.menus[0].dep_uid)
   const single = r.courses.find((x) => x.id === '000003')
   assert.deepEqual(single.menus.map((m) => m.dep_uid), ['DEP-B'])
+})
+
+test('多系合開的課合併各系的類別代碼', async () => {
+  const { fetchJson } = fakeServer()
+  const r = await crawlSemester({ fetchJson, concurrency: 1 })
+  assert.deepEqual(r.courses.find((x) => x.id === '000002').brief.sort(), ['Z102', 'Z204'])
 })

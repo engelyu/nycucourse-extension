@@ -68,6 +68,12 @@ export function parseCosList(json, menu) {
           enrolled: str(c.reg_num),
         }
         if (menu) course.menu = menu
+        // 類別代碼，例如 Z102（核心・基本素養）、Z204（語言與溝通）；沒有就不加欄位
+        const codes = objectKeys((dep.brief || {})[key] || {})
+          .flatMap((k) => k.split(','))
+          .map((k) => k.trim())
+          .filter(Boolean)
+        if (codes.length) course.brief = [...new Set(codes)]
         out.push(course)
       }
     }

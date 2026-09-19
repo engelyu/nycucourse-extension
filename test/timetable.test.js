@@ -99,3 +99,22 @@ test('parseCosList 可附加系所查詢資訊', () => {
   assert.deepEqual(parseCosList(json, menu)[0].menu, menu)
   assert.equal(parseCosList(json)[0].menu, undefined)
 })
+
+test('parseCosList 帶出課程的類別代碼（brief），沒有代碼就不加欄位', () => {
+  const json = {
+    DEP: {
+      1: {
+        '1151_112304': { acy: '115', sem: '1', cos_id: '112304', cos_cname: '計算機概論' },
+        '1151_514027': { acy: '115', sem: '1', cos_id: '514027', cos_cname: '創意文案' },
+        '1151_516700': { acy: '115', sem: '1', cos_id: '516700', cos_cname: '線性代數' },
+      },
+      brief: {
+        '1151_112304': { Z102: { brief_code: 'Z102', brief: '基本素養-量性推理(110)' } },
+        '1151_514027': { 'A505,Z204': { brief_code: 'A505,Z204', brief: '校基本素養(106),語言與溝通-溝通表達(111)' } },
+        '1151_516700': { '': { brief_code: '', brief: '' } },
+      },
+    },
+  }
+  const out = Object.fromEntries(parseCosList(json).map((c) => [c.id, c.brief]))
+  assert.deepEqual(out, { 112304: ['Z102'], 514027: ['A505', 'Z204'], 516700: undefined })
+})
