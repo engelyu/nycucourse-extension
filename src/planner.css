@@ -157,7 +157,8 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .tt-day { text-align: center; color: var(--muted); padding: 2px 0; position: sticky; top: 0; background: Canvas; z-index: 1; }
 .tt-period { color: var(--muted); display: flex; flex-direction: column; align-items: flex-start; padding: 2px 4px; }
 .tt-period small { font-size: 10px; }
-.tt-cell { min-height: 30px; border: 1px solid var(--line); border-radius: 4px; padding: 2px; display: flex; flex-direction: column; gap: 2px; }
+/* container-type 讓 .tt-cell 自己的寬度可以當 @container 查詢的依據，格子太窄時整個藏起教室 */
+.tt-cell { min-height: 30px; border: 1px solid var(--line); border-radius: 4px; padding: 2px; display: flex; flex-direction: column; gap: 2px; container-type: inline-size; }
 .tt-cell.preview { background: var(--sel); border-color: var(--accent); }
 .tt-cell.conflict { border: 2px solid var(--error); }
 .tt-gap { height: 6px; }
@@ -165,11 +166,17 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
   display: flex; gap: 3px; align-items: baseline; width: 100%; min-width: 0; text-align: left;
   padding: 1px 4px; border: none; border-left: 4px solid var(--kind); border-radius: 3px;
   background: color-mix(in srgb, var(--kind) 16%, Canvas); color: CanvasText; font-size: 12px; line-height: 1.35;
+  overflow: hidden;
 }
-/* 課名優先：教室先縮，空間不夠時直接被裁掉；課名維持一行、超出用 …
-   name 給夠大的 min-width，格子太窄時 flexbox 會先讓它頂到這個下限就不再縮，剩下的擠壓全部由 room 吸收 */
-.tt-course .name { flex: 1 1 auto; min-width: 4.5em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.tt-course .room { flex: 0 1 auto; min-width: 0; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.tt-course .name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* 教室不縮不裁，要嘛完整顯示要嘛整個藏起來（見下面 @container），不要顯示裁一半的字 */
+.tt-course .room { flex: 0 0 auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+/* 格子太窄時（例如六有課、6 欄擠在較窄的視窗）教室先整個藏起來，讓課名有全部空間；title 與詳情小卡還是看得到教室。
+   105px 這個門檻量過 1280px 寬視窗、6 欄（含週六）時格子約 101px──剛好不夠同時放完整課名跟教室，門檻抓在它之上，
+   確保這個常見寬度下教室是「整個藏起來」而不是半裁；欄數變少、格子變寬到 105px 以上時教室才會出現 */
+@container (max-width: 105px) {
+  .tt-course .room { display: none; }
+}
 .tt-course.cont { height: 6px; padding: 0; }
 .tt-course.same, .tt-course:hover { outline: 2px solid var(--kind); outline-offset: 0; }
 .tt-course:focus-visible { outline: 2px solid var(--accent); }
