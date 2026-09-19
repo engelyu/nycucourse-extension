@@ -177,3 +177,56 @@ export function withSyncedSources(schedule, reply, nowMs) {
     },
   }
 }
+
+const minutesOf = (hhmm) => {
+  const [h, m] = str(hhmm).split(':').map(Number)
+  return h * 60 + m
+}
+
+// 把 buildWeek 的格子合併成區塊：同一天、同一個項目的連續節次合成一塊。
+// 同一格有多個項目（衝堂）時，用 lane / lanes 並排。時間一律換算成分鐘，給 locateNow 用。
+export function mergeBlocks(week) {
+  const rows = (week.rows || []).map(({ code, label, start, end }) => ({ code, label, start, end, startMin: minutesOf(start), endMin: minutesOf(end) }))
+  const blocks = []
+  for (const day of week.days || []) {
+    const open = new Map() // item.key -> 還在延伸中的區塊
+    ;(week.rows || []).forEach((row, r) => {
+      const here = row.cells[day] || []
+      for (const key of [...open.keys()]) if (!here.some((x) => x.key === key)) open.delete(key)
+      for (const entry of here) {
+        const block = open.get(entry.key)
+        if (block) {
+          block.span += 1
+          block.end = row.end
+          block.endMin = rows[r].endMin
+          if (entry.room && !block.rooms.includes(entry.room)) block.rooms.push(entry.room)
+          block.lanes = Math.max(block.lanes, here.length)
+        } else {
+          const { room, campus, ...item } = entry
+          const created = {
+            key: `${entry.key}|${day}|${r}`,
+            item,
+            day,
+            row: r,
+            span: 1,
+            start: row.start,
+            end: row.end,
+            startMin: rows[r].startMin,
+            endMin: rows[r].endMin,
+            rooms: room ? [room] : [],
+            lane: here.indexOf(entry),
+            lanes: here.length,
+          }
+          open.set(entry.key, created)
+          blocks.push(created)
+        }
+      }
+    })
+  }
+  return {
+    days: week.days || [],
+    dayNames: week.dayNames || DAY_NAMES,
+    rows,
+    blocks: blocks.map(({ rooms, ...b }) => ({ ...b, room: rooms.join('/') })),
+  }
+}

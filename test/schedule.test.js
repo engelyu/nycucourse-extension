@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { courseToItem, manualItem, slotsFromTimeRange, applyOverrides, itemUrl, buildWeek, scheduleItems, withSyncedSources } from '../src/lib/schedule.js'
+import { courseToItem, manualItem, slotsFromTimeRange, applyOverrides, itemUrl, buildWeek, scheduleItems, withSyncedSources, mergeBlocks } from '../src/lib/schedule.js'
 
 const course = {
   cos_id: '516700',
@@ -145,4 +145,44 @@ test('withSyncedSources 寫入正式選課與預排並記下時間與學期', ()
   assert.deepEqual(next.manual, before.manual)
   assert.notEqual(next, before)
   assert.deepEqual(withSyncedSources(undefined, {}, 5).sources.registered, { semester: '', updatedAt: 5, courses: [] })
+})
+
+test('mergeBlocks 把同一天同一門課的連續節次合併成一個區塊', () => {
+  const items = [
+    courseToItem({ cos_id: '1', cos_cname: '線性代數', cos_time: 'W34T34-SC201[GF]' }, { source: 'registered' }),
+    courseToItem({ cos_id: '2', cos_cname: '導師時間', cos_time: 'M5-SC101[GF]' }, { source: 'registered' }),
+  ]
+  const layout = mergeBlocks(buildWeek(items))
+  assert.deepEqual(layout.rows.map((r) => r.code), ['3', '4', 'n', '5'])
+  assert.equal(layout.rows[0].startMin, 610)
+  const wed = layout.blocks.find((b) => b.day === 3)
+  assert.deepEqual(
+    { row: wed.row, span: wed.span, start: wed.start, end: wed.end, startMin: wed.startMin, endMin: wed.endMin, room: wed.room, lanes: wed.lanes },
+    { row: 0, span: 2, start: '10:10', end: '12:00', startMin: 610, endMin: 720, room: 'SC201', lanes: 1 },
+  )
+  assert.equal(layout.blocks.length, 3)
+})
+
+test('mergeBlocks 衝堂時兩門課都保留並標示 lane', () => {
+  const items = [
+    courseToItem({ cos_id: '1', cos_cname: '甲', cos_time: 'M12-A101[GF]' }, { source: 'registered' }),
+    courseToItem({ cos_id: '2', cos_cname: '乙', cos_time: 'M2-B202[GF]' }, { source: 'registered' }),
+  ]
+  const { blocks } = mergeBlocks(buildWeek(items))
+  const a = blocks.find((b) => b.item.cosId === '1')
+  const b = blocks.find((x) => x.item.cosId === '2')
+  assert.equal(a.lanes, 2)
+  assert.equal(b.lanes, 2)
+  assert.notEqual(a.lane, b.lane)
+})
+
+test('mergeBlocks 同一門課不同節在不同教室時合併教室', () => {
+  const items = [courseToItem({ cos_id: '1', cos_cname: '實驗', cos_time: 'F3-A101[GF],F4-B202[GF]' }, { source: 'registered' })]
+  const [block] = mergeBlocks(buildWeek(items)).blocks
+  assert.equal(block.span, 2)
+  assert.equal(block.room, 'A101/B202')
+})
+
+test('mergeBlocks 沒有行程時回空區塊', () => {
+  assert.deepEqual(mergeBlocks(buildWeek([])).blocks, [])
 })
