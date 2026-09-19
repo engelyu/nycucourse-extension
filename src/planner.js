@@ -44,10 +44,26 @@ function restore(saved) {
 
 // ---------- 時段 ----------
 
-function setSelection(next) {
-  state.selection = new Set([...next].filter((k) => VALID.has(k)))
+// 復原：選取的每次變更都記下前一個狀態（帶入空堂、全部清除會整個取代，最需要能退回）
+const history = []
+const HISTORY_LIMIT = 30
+
+function setSelection(next, { remember = true } = {}) {
+  const cleaned = new Set([...next].filter((k) => VALID.has(k)))
+  const same = cleaned.size === state.selection.size && [...cleaned].every((k) => state.selection.has(k))
+  if (same) return
+  if (remember) {
+    history.push(state.selection)
+    if (history.length > HISTORY_LIMIT) history.shift()
+  }
+  state.selection = cleaned
   save()
   render()
+}
+
+function undo() {
+  if (!history.length) return
+  setSelection(history.pop(), { remember: false })
 }
 
 function fill(sources) {
@@ -415,6 +431,7 @@ function render() {
   grid.render(state.selection, occupiedKinds(state.schedule))
   $('#status-at').textContent = statusMessage || statusAtText()
   $('#count').textContent = `已選 ${state.selection.size} 格`
+  $('#undo').disabled = !history.length
   renderResults()
 }
 
@@ -444,6 +461,14 @@ async function init() {
   $('#fill-registered').addEventListener('click', () => fill(['registered']))
   $('#fill-all').addEventListener('click', () => fill(['registered', 'preregist']))
   $('#clear').addEventListener('click', () => setSelection(new Set()))
+  $('#undo').addEventListener('click', undo)
+  document.addEventListener('keydown', (e) => {
+    const typing = e.target.closest && e.target.closest('input, textarea, select')
+    if (!typing && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault()
+      undo()
+    }
+  })
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return
     if (changes.schedule) state.schedule = changes.schedule.newValue || state.schedule
