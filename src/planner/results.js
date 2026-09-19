@@ -77,24 +77,8 @@ function card(hit, ctx) {
   }
   li.append(info, actions)
 
-  if (s && s.status === 'queried' && !(status && status.state === 'registered')) {
-    const box = document.createElement('div')
-    box.className = 'query-rows'
-    for (const row of s.rows) {
-      const r = document.createElement('div')
-      r.className = 'query-row'
-      const a = row.availability
-      const ok = a.canRegister
-      const text = ok ? [AVAILABLE_TEXT[a.action], a.seats, ...a.reasons].filter(Boolean).join('・') : [(a.message || '不能選').replace(/[。.]\s*$/, ''), a.seats].filter(Boolean).join('・')
-      r.append(span('how', row.label), span(ok ? 'avail ok' : 'avail error', text))
-      if (ok) {
-        const label = status && status.state === 'wish' && a.needsWish ? '改志願' : ACTION_LABELS[a.action]
-        r.append(button(label, row.inPrereg ? '開啟確認視窗' : '先加入預排，再開啟確認視窗', () => ctx.onRegister(course, row)))
-      }
-      box.append(r)
-    }
-    li.append(box)
-  }
+  const rows = renderQueryRows(course, s, status, (c, row) => ctx.onRegister(c, row))
+  if (rows) li.append(rows)
 
   if (s && s.status === 'choose') {
     const box = document.createElement('div')
@@ -117,6 +101,32 @@ function card(hit, ctx) {
     li.append(box)
   }
   return li
+}
+
+// 查詢結果：每種採計方式一列，能選的附「加選／登記／改志願」按鈕（結果卡片與詳情小卡共用）
+export function renderQueryRows(course, s, status, onRegister) {
+  if (!(s && s.status === 'queried' && !(status && status.state === 'registered'))) return null
+  const box = document.createElement('div')
+  box.className = 'query-rows'
+  for (const row of s.rows) {
+    const r = document.createElement('div')
+    r.className = 'query-row'
+    const a = row.availability
+    const ok = a.canRegister
+    const text = ok ? [AVAILABLE_TEXT[a.action], a.seats, ...a.reasons].filter(Boolean).join('・') : [(a.message || '不能選').replace(/[。.]\s*$/, ''), a.seats].filter(Boolean).join('・')
+    r.append(span('how', row.label), span(ok ? 'avail ok' : 'avail error', text))
+    if (ok) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.textContent = status && status.state === 'wish' && a.needsWish ? '改志願' : ACTION_LABELS[a.action]
+      b.title = row.inPrereg ? '開啟確認視窗' : '先加入預排，再開啟確認視窗'
+      b.disabled = Boolean(s.busy)
+      b.addEventListener('click', () => onRegister(course, row))
+      r.append(b)
+    }
+    box.append(r)
+  }
+  return box
 }
 
 export function renderResults(container, found, ctx) {

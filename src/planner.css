@@ -97,12 +97,12 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .card .badge[data-state="registered"] { --c: #009E73; }
 .card .badge[data-state="wish"] { --c: #E69F00; }
 .card .badge[data-state="preregist"] { --c: #0072B2; }
-.card .query-rows { flex-basis: 100%; display: grid; gap: 4px; margin-top: 2px; padding-top: 6px; border-top: 1px dashed var(--line); }
-.card .query-row { display: flex; gap: 10px; align-items: center; font-size: 12px; }
-.card .query-row .how { min-width: 140px; font-weight: 600; }
-.card .query-row .avail { flex: 1; }
-.card .query-row .avail.ok { color: var(--ok); }
-.card .query-row .avail.error { color: var(--error); }
+.query-rows { flex-basis: 100%; display: grid; gap: 4px; margin-top: 2px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.query-row { display: flex; gap: 10px; align-items: center; font-size: 12px; }
+.query-row .how { min-width: 140px; font-weight: 600; }
+.query-row .avail { flex: 1; }
+.query-row .avail.ok { color: var(--ok); }
+.query-row .avail.error { color: var(--error); }
 .card .muted { color: var(--muted); font-size: 12px; }
 
 /* 篩選回饋：已套用的篩選、選項門數、零結果建議 */
@@ -181,3 +181,20 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .tt-course.same, .tt-course:hover { outline: 2px solid var(--kind); outline-offset: 0; }
 .tt-course:focus-visible { outline: 2px solid var(--accent); }
 .hidden-note { margin: 0 0 4px; font-size: 12px; }
+
+/* 課表上的課的詳情小卡（非 modal，開在卡片旁；窄視窗置中） */
+.detail { position: fixed; margin: 0; z-index: 10; width: min(360px, calc(100vw - 32px)); padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: Canvas; color: CanvasText; box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
+.detail.centered { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.detail-head { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.detail-title { font-weight: 600; color: inherit; }
+.detail-close { border: none; background: none; padding: 0 4px; }
+.detail-line { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.detail .danger { color: var(--error); border-color: var(--error); }
+.detail .ok { color: var(--ok); font-size: 12px; }
+.detail .error { color: var(--error); font-size: 12px; }
+.detail .query-rows { margin-top: 8px; }
+
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; padding: 8px 14px; border-radius: 8px; background: CanvasText; color: Canvas; font-size: 13px; box-shadow: 0 4px 16px rgba(0, 0, 0, .2); }
+.toast[hidden] { display: none; }
+.toast button.link { color: Canvas; font-size: 13px; }
