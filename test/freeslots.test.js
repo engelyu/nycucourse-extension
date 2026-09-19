@@ -100,3 +100,18 @@ test('findCourses 超過 200 門時截斷', () => {
   assert.equal(r.inside.length, 200)
   assert.equal(r.truncated, true)
 })
+
+// 開課單位依中文排序規則（筆畫），一系 < 二系 < 三系
+test('findCourses 排序：預設最貼合（超出少的在前），也可以依時間、課號、學分、開課單位', () => {
+  const list = [
+    c('201', 'M1234F34-A1[GF]', { credit: '2.00', dep: '二系' }),
+    c('202', 'F345-A1[GF]', { credit: '4.00', dep: '一系' }),
+    c('203', 'F3-A1[GF],T12-A1[GF]', { credit: '3.00', dep: '三系' }),
+  ]
+  const o = { ...base, mode: 'overlap' }
+  assert.deepEqual(ids(findCourses(list, o).overlap), ['202', '203', '201'])
+  assert.deepEqual(ids(findCourses(list, { ...o, sort: 'time' }).overlap), ['201', '203', '202'])
+  assert.deepEqual(ids(findCourses(list, { ...o, sort: 'id' }).overlap), ['201', '202', '203'])
+  assert.deepEqual(ids(findCourses(list, { ...o, sort: 'credit' }).overlap), ['202', '203', '201'])
+  assert.deepEqual(ids(findCourses(list, { ...o, sort: 'dep' }).overlap), ['202', '201', '203'])
+})

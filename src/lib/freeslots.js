@@ -83,6 +83,29 @@ export function describeKeys(keys) {
 
 export const RESULT_LIMIT = 200
 
+const byTime = (a, b) => ORDER.get(a.keys[0]) - ORDER.get(b.keys[0])
+const byId = (a, b) => str(a.course.id).localeCompare(str(b.course.id))
+const creditOf = (hit) => {
+  const n = Number(hit.course.credit)
+  return Number.isFinite(n) ? n : -1
+}
+
+// 結果排序，使用者可以選。fit：超出的節數越少越前面（差一點就剛好的課先出現）
+export const SORT_OPTIONS = [
+  { id: 'fit', label: '最貼合' },
+  { id: 'time', label: '上課時間' },
+  { id: 'id', label: '課號' },
+  { id: 'credit', label: '學分（多到少）' },
+  { id: 'dep', label: '開課單位' },
+]
+const SORTS = {
+  fit: (a, b) => a.outside.length - b.outside.length || byTime(a, b) || byId(a, b),
+  time: (a, b) => byTime(a, b) || byId(a, b),
+  id: byId,
+  credit: (a, b) => creditOf(b) - creditOf(a) || byTime(a, b) || byId(a, b),
+  dep: (a, b) => str(a.course.dep).localeCompare(str(b.course.dep), 'zh-Hant') || byTime(a, b) || byId(a, b),
+}
+
 const numberOr = (v, fallback) => {
   const text = str(v).trim()
   const n = Number(text)
@@ -118,9 +141,9 @@ export function findCourses(courses, filters) {
     if (m.inside) inside.push({ course, keys, outside: [] })
     else if (f.mode === 'overlap' && m.overlap) overlap.push({ course, keys, outside: m.outside })
   }
-  const byTime = (a, b) => ORDER.get(a.keys[0]) - ORDER.get(b.keys[0]) || str(a.course.id).localeCompare(str(b.course.id))
-  inside.sort(byTime)
-  overlap.sort(byTime)
+  const compare = SORTS[f.sort] || SORTS.fit
+  inside.sort(compare)
+  overlap.sort(compare)
   const total = inside.length + overlap.length
   const keepInside = inside.slice(0, RESULT_LIMIT)
   const keepOverlap = overlap.slice(0, Math.max(0, RESULT_LIMIT - keepInside.length))

@@ -12,6 +12,8 @@
 
 ## Global Constraints
 
+- Update after checkpoint A (user decision): result sorting is user-selectable via `filters.sort` with `SORT_OPTIONS` from `lib/freeslots.js`: `fit` (default, fewest outside slots first), `time`, `id`, `credit` (desc), `dep`. Task 6 adds a `排序` select to the filters form and passes `sort` through `state.filters`.
+
 - The page is a full Chrome tab (`src/planner.html`) titled 「選課規劃」. The popup shell gets a button 「規劃 ↗」 that opens it.
 - The grid always shows 7 days (一–日) × all 16 periods (Y, Z, 1–4, N, 5–9, A–D). A slot key is `"<day>-<period code>"`, day 1–7 (Mon = 1), with period codes from `PERIODS` (`y`,`z`,`1`…`4`,`n`,`5`…`9`,`a`…`d`).
 - There are two 「帶入空堂」 buttons: 避開正式選課 (`['registered']`) and 避開正式選課＋預排 (`['registered','preregist']`). Both use `scheduleItems`, which already includes manual items and applies overrides. Filling selects every free slot and **replaces** the current selection.
