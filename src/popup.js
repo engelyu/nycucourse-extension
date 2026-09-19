@@ -5,6 +5,7 @@ import { formatSeats } from './lib/seats.js'
 import { courseOutlineUrl } from './lib/links.js'
 import { parseDeptCounts, menusToFetch, mergeCounts, countsFresh } from './lib/counts.js'
 import { parseRegStatus, sysStatusNotice } from './lib/regstatus.js'
+import { findAttributionOptions, preregParams, defaultOption, needsChoice, courseDepUids } from './lib/attribution.js'
 
 const COS_ORIGIN = 'https://cos.nycu.edu.tw/'
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -322,9 +323,12 @@ function stateLabel(s) {
   el.className = 'state'
   if (s === 'pending') {
     el.textContent = '加入中…'
+  } else if (s.status === 'choose') {
+    el.textContent = '選擇採計方式'
+    el.classList.add('warn')
   } else if (s.status === 'added') {
     // 有訊息代表已送出但無法確認
-    el.textContent = s.msg || '已加入'
+    el.textContent = s.msg || (s.note ? `已加入・${s.note}` : '已加入')
     el.classList.add(s.msg ? 'warn' : 'ok')
   } else if (s.status === 'exists') {
     el.textContent = '已在預排'
@@ -390,6 +394,7 @@ function courseRow(course) {
   } else {
     actions.append(stateLabel(s))
   }
+  if (s && s.status === 'choose') li.append(choiceRow(course.id, s.options))
 
   li.append(info, actions)
   return li
@@ -472,18 +477,102 @@ async function unavailableMessage() {
   return '請先登入選課網'
 }
 
+// 同一門課在選課網可能有多種採計方式（例如選修或核心），加入預排時就決定了
+let depTreePromise = null
+function getDepTree() {
+  if (!depTreePromise) {
+    depTreePromise = send(state.tab.id, { type: 'deptree' }).then((reply) => {
+      if (reply && reply.ok) return reply.tree
+      depTreePromise = null
+      if (reply && reply.reason === 'not_logged_in') throw Object.assign(new Error('not_logged_in'), { reason: 'not_logged_in' })
+      return null
+    })
+  }
+  return depTreePromise
+}
+
+async function getCourseList(menu) {
+  const reply = await send(state.tab.id, { type: 'courselist', menu })
+  if (reply && reply.ok) return reply.list
+  if (reply && reply.reason === 'not_logged_in') throw Object.assign(new Error('not_logged_in'), { reason: 'not_logged_in' })
+  throw new Error((reply && reply.detail) || '選課網沒有回應')
+}
+
+// 查不到（例如課程資料太舊）時回傳空陣列，照舊方式加入
+async function optionsFor(id) {
+  const course = state.courses.find((c) => c.id === id)
+  return findAttributionOptions({
+    cosId: id,
+    courseName: course ? course.name : '',
+    depUids: courseDepUids(course),
+    getTree: getDepTree,
+    getList: getCourseList,
+  })
+}
+
+function choiceRow(id, options) {
+  const box = document.createElement('div')
+  box.className = 'choices'
+  const lead = document.createElement('span')
+  // 只找到核心等其他選單時，提醒使用者開課系所那一種沒找到，不要默默當成核心加入
+  lead.textContent = options.length === 1 ? '在開課系所找不到這門課，只找到：' : '這門課可以算：'
+  box.append(lead)
+  for (const option of options) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = option.label
+    btn.title = `以「${option.label}」加入預排，正式登記時會照這個類別`
+    btn.addEventListener('click', () => submitSingle(id, option))
+    box.append(btn)
+  }
+  const cancel = document.createElement('button')
+  cancel.type = 'button'
+  cancel.className = 'link'
+  cancel.textContent = '取消'
+  cancel.addEventListener('click', () => {
+    state.addStatus.delete(id)
+    renderSearch()
+  })
+  box.append(cancel)
+  return box
+}
+
 async function addSingle(id) {
   if (!state.cosReady || !state.tab) return
   state.addStatus.set(id, 'pending')
   renderSearch()
+  let options
+  try {
+    options = await optionsFor(id)
+  } catch (err) {
+    if (err && err.reason === 'not_logged_in') {
+      state.addStatus.set(id, { status: 'error', msg: await unavailableMessage() })
+      renderSearch()
+      return
+    }
+    options = []
+  }
+  if (needsChoice(options)) {
+    state.addStatus.set(id, { status: 'choose', options })
+    renderSearch()
+    return
+  }
+  return submitSingle(id, options[0] || null)
+}
+
+async function submitSingle(id, option) {
+  if (!state.cosReady || !state.tab) return
+  state.addStatus.set(id, 'pending')
+  renderSearch()
+  const params = option ? { [id]: preregParams(id, option) } : {}
   let reply
   try {
-    reply = await send(state.tab.id, { type: 'import', ids: [id] })
+    reply = await send(state.tab.id, { type: 'import', ids: [id], params })
   } catch {
     reply = { ok: false, reason: 'network', detail: '無法連到選課網頁面，請重新整理選課網分頁' }
   }
   if (reply && reply.ok && reply.results && reply.results[0]) {
-    state.addStatus.set(id, reply.results[0])
+    state.addStatus.set(id, { ...reply.results[0], note: option ? option.label : '' })
     if (reply.results[0].status === 'added') {
       state.needsReload = true
       renderTabBar()
@@ -515,7 +604,7 @@ function fillGroup(key, items, render) {
 
 function renderBulkResults(list, invalid) {
   const by = (status) => list.filter((r) => r.status === status)
-  fillGroup('added', by('added'), (r) => [code(r.id), r.msg ? ` ${r.msg}` : ''])
+  fillGroup('added', by('added'), (r) => [code(r.id), r.msg ? ` ${r.msg}` : r.note ? ` ${r.note}` : ''])
   fillGroup('exists', by('exists'), (r) => [code(r.id)])
   fillGroup('error', by('error'), (r) => [code(r.id), ` ${r.msg}`])
   fillGroup('invalid', invalid, (t) => [code(t)])
@@ -539,10 +628,34 @@ async function onBulkImport() {
     return
   }
   btn.disabled = true
+  // 先查每門課的採計方式；有多種時用一般採計，並在結果列出其他可能
+  const params = {}
+  const optionNotes = {}
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      showHint(hint, `正在確認採計方式（${i + 1}/${ids.length}）…`)
+      const options = await optionsFor(ids[i])
+      const chosen = defaultOption(options)
+      if (!chosen) continue
+      params[ids[i]] = preregParams(ids[i], chosen)
+      const others = options.filter((o) => o !== chosen).map((o) => o.label)
+      optionNotes[ids[i]] = others.length
+        ? `以「${chosen.label}」加入；也可算${others.map((l) => `「${l}」`).join('、')}，要改請在搜尋結果單筆加入或到選課頁變更`
+        : chosen.source === 'home'
+          ? chosen.label
+          : `在開課系所找不到，以「${chosen.label}」加入，請到選課頁確認`
+    }
+  } catch (err) {
+    if (err && err.reason === 'not_logged_in') {
+      showHint(hint, `${await unavailableMessage()}。`, 'error')
+      btn.disabled = false
+      return
+    }
+  }
   showHint(hint, `正在加入 ${ids.length} 門課…`)
   let reply
   try {
-    reply = await send(state.tab.id, { type: 'import', ids })
+    reply = await send(state.tab.id, { type: 'import', ids, params })
   } catch {
     showHint(hint, '無法連到選課網頁面，請重新整理該分頁後再試。', 'error')
     btn.disabled = false
@@ -555,8 +668,9 @@ async function onBulkImport() {
     return
   }
 
-  renderBulkResults(reply.results, invalid)
-  for (const r of reply.results) state.addStatus.set(r.id, r)
+  const results = reply.results.map((r) => (r.status === 'added' && optionNotes[r.id] ? { ...r, note: optionNotes[r.id] } : r))
+  renderBulkResults(results, invalid)
+  for (const r of results) state.addStatus.set(r.id, r)
   renderSearch()
   if (reply.warning || reply.results.some((r) => r.status === 'error')) refreshSysStatus()
 

@@ -103,7 +103,14 @@ export async function crawlSemester({
     const json = await withRetry(() => post('get_cos_list', cosListParams(semester, uid)), uid, { retryDelayMs, sleep, isStopped })
     if (isStopped()) return
     for (const course of parseCosList(json, depMenus.get(uid))) {
-      if (course.id && !courses.has(course.id)) courses.set(course.id, course)
+      if (!course.id) continue
+      // 多系合開的課會出現在好幾個系所，全部記下來：選課網只在其中一個系所列出這門課
+      const seen = courses.get(course.id)
+      if (!seen) {
+        courses.set(course.id, { ...course, menus: course.menu ? [course.menu] : [] })
+      } else if (course.menu && !seen.menus.some((m) => m.dep_uid === course.menu.dep_uid)) {
+        seen.menus.push(course.menu)
+      }
     }
     done++
     onProgress({ phase: 'courses', done, total: depUids.length })

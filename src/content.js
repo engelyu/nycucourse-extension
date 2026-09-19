@@ -23,8 +23,9 @@ async function post(path, params) {
 }
 
 // 網路錯誤會丟出例外，由 runBatch 處理；HTTP 錯誤回傳失敗結果。
-async function addOne(id) {
-  const { status, text } = await post('setpreregist', {
+// params 是選好採計方式後的加入參數（和選課網送出的一樣）；沒有就用舊的空選單加入。
+async function addOne(id, params) {
+  const { status, text } = await post('setpreregist', params || {
     cos_id: id,
     menu_data: '{}',
     wType: 'X',
@@ -37,6 +38,45 @@ async function addOne(id) {
   return classifyResult(id, text, status)
 }
 
+// 改採計方式：選課網的預排一個課號只能一筆，要先移除再用新的選單加入。
+// 加不回去時用原本的參數還原，避免課從預排消失。
+async function changePreregist(id, params, previous) {
+  if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
+  const removed = await post('deletepreregist', { cos_id: id })
+  if (!isOk(removed.status)) return { ok: true, result: { id, status: 'error', msg: `移除失敗（HTTP ${removed.status}）` } }
+  const result = await addOne(id, params)
+  if (result.status === 'added') return { ok: true, result }
+  const restored = previous ? await addOne(id, previous) : null
+  const note = restored && restored.status === 'added' ? '，已還原原本的預排' : '，而且無法還原原本的預排，請到選課網重新加入'
+  return { ok: true, result: { ...result, status: 'error', msg: `${result.msg || '加入失敗'}${note}` } }
+}
+
+// 選課網某個選單底下的課程清單，同一頁面短時間內重複使用
+const listCache = new Map()
+const LIST_FRESH_MS = 3 * 60_000
+async function courseList(menu) {
+  if (!tokenUsable(token(), Date.now())) return null
+  const m = menu || {}
+  const key = JSON.stringify(m)
+  const hit = listCache.get(key)
+  if (hit && Date.now() - hit.at < LIST_FRESH_MS) return hit.list
+  const { status, text } = await post('preregistcourse', {
+    type: m.type ?? '',
+    dep_category: m.dep_category ?? '',
+    college_no: m.college_no ?? '',
+    dep_uid: m.dep_uid ?? '',
+    group: m.group ?? '',
+    grade: m.grade ?? '',
+    class: m.class ?? '',
+    codition: '',
+  })
+  if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
+  if (!text.trim()) return null
+  const list = JSON.parse(text)
+  listCache.set(key, { at: Date.now(), list })
+  return list
+}
+
 // 回傳預排課號；登入失效時選課網回空字串，這時回傳 null。
 async function currentPreregistIds() {
   const { status, text } = await post('getpreregist', {})
@@ -46,9 +86,9 @@ async function currentPreregistIds() {
   return Array.isArray(list) ? list.map((c) => String(c.cos_id)) : []
 }
 
-async function importIds(ids) {
+async function importIds(ids, params = {}) {
   if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
-  return runBatch(ids, addOne, currentPreregistIds)
+  return runBatch(ids, (id) => addOne(id, params[id]), currentPreregistIds)
 }
 
 // 選課網目前的學期，取自 userinfo 的 lastacysem（例如 1151）；讀不到就回傳 null。
@@ -111,6 +151,12 @@ async function courseLists() {
     menu_data: c.menu_data,
     category_type: c.category_type,
     category_cname: c.category_cname,
+    // 採計方式：顯示用，變更失敗時也要用它們還原
+    cos_type_code: c.cos_type_code,
+    wType: c.wType,
+    GroupName: c.GroupName,
+    GroupName_E: c.GroupName_E,
+    category_ename: c.category_ename,
     // 分發課程登記志願後 sFlag 是志願序，分發完成才是 F
     sFlag: c.sFlag,
     GroupUID: c.GroupUID,
@@ -216,7 +262,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'import') {
     const ids = Array.isArray(message.ids) ? message.ids : []
-    serial(() => importIds(ids)).then(sendResponse)
+    const params = message.params && typeof message.params === 'object' ? message.params : {}
+    serial(() => importIds(ids, params)).then(sendResponse)
+    return true
+  }
+  if (message.type === 'courselist') {
+    serial(() => courseList(message.menu)).then(
+      (list) => sendResponse(list === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, list }),
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'changepreregist') {
+    serial(() => changePreregist(String(message.cosId), message.params, message.previous)).then(
+      sendResponse,
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
     return true
   }
   if (message.type === 'deptcounts') {

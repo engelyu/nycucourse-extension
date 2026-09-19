@@ -166,3 +166,24 @@ code { font-family: ui-monospace, Menlo, monospace; }
 .search-bar .hint { flex: 1; }
 .search-bar button { font-size: 12px; padding: 2px 8px; }
 .results .meta .live { color: var(--accent, #1f6feb); }
+
+/* 選擇採計方式 */
+.results li { flex-wrap: wrap; }
+.results .choices {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.results .choices button { font-size: 12px; }
+.results .choices button.link {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}

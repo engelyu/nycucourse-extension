@@ -200,3 +200,13 @@ test('沒有失敗時 failedDeps 是空陣列', async () => {
   const r = await crawlSemester({ fetchJson, concurrency: 2, sleep: noSleep })
   assert.deepEqual(r.failedDeps, [])
 })
+
+test('多系合開的課記下所有出現過的系所', async () => {
+  const { fetchJson } = fakeServer()
+  const r = await crawlSemester({ fetchJson, concurrency: 1 })
+  const shared = r.courses.find((x) => x.id === '000002')
+  assert.deepEqual(shared.menus.map((m) => m.dep_uid).sort(), ['DEP-A', 'DEP-B'])
+  assert.equal(shared.menu.dep_uid, shared.menus[0].dep_uid)
+  const single = r.courses.find((x) => x.id === '000003')
+  assert.deepEqual(single.menus.map((m) => m.dep_uid), ['DEP-B'])
+})

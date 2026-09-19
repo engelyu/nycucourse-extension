@@ -3,12 +3,14 @@ import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
 import { parseRegStatus } from './lib/regstatus.js'
+import { describeAttribution, findAttributionOptions, preregParams, attributionKey, courseDepUids } from './lib/attribution.js'
 
 const $ = (sel) => document.querySelector(sel)
 
 const state = {
   courses: [], // 預排課程（要加選的候選）
   menus: new Map(), // cosId -> 課程時間表的查詢條件
+  timetable: new Map(), // cosId -> 課程時間表的課程資料（含出現過的所有系所）
   registered: new Map(), // 課號 -> 選課網的紀錄（已選上或登記中）
   groups: {}, // 分發群組（志願序）
   checks: new Map(), // cosId -> { availability, record }
@@ -16,6 +18,7 @@ const state = {
   auto: { enabled: false, time: '13:00', items: [], log: [] }, // 每日自動登記設定
   autoNext: null, // 下次自動執行的時間
   regStatus: { open: true, message: '' }, // 選課系統是否開放（checkreg）
+  choosing: null, // { cosId, options } 正在選採計方式的課
 }
 
 // 讀選課系統是否暫停；暫停時顯示伺服器給的說明，並停用加選相關按鈕
@@ -73,6 +76,7 @@ async function load() {
   const regCourses = (((schedule || {}).sources || {}).registered || { courses: [] }).courses || []
   state.registered = new Map(regCourses.map((c) => [String(c.cos_id), c]))
   state.menus = new Map(((courseData && courseData.courses) || []).filter((c) => c.menu).map((c) => [c.id, c.menu]))
+  state.timetable = new Map(((courseData && courseData.courses) || []).map((c) => [c.id, c]))
   renderStatus()
   render()
   if (state.auto) renderAuto()
@@ -134,7 +138,8 @@ function render() {
     const teacher = document.createElement('span')
     teacher.className = 'sub'
     teacher.textContent = course.lecturers || ''
-    name.append(teacher)
+    name.append(teacher, attributionLine(course))
+    if (state.choosing && state.choosing.cosId === cosId) name.append(attributionChoices(course, state.choosing.options))
 
     const time = document.createElement('td')
     time.textContent = describeSlots(parseCosTime(course.cos_time)) || '未定'
@@ -212,6 +217,119 @@ async function checkCourse(course, btn) {
   if (availability.needsWish) await loadGroups()
   render()
   return state.checks.get(cosId)
+}
+
+// ---------- 採計方式 ----------
+// 選課網依「從哪個選單加入預排」決定類別（例如選修或核心）。要改只能移除後重新加入。
+
+function attributionLine(course) {
+  const cosId = String(course.cos_id)
+  const line = document.createElement('span')
+  line.className = 'sub attribution'
+  const label = describeAttribution(course)
+  line.textContent = `採計：${label}`
+  if (label === '未指定') line.title = '用舊版擴充功能加入，選課網自己的「登記」按鈕會失敗。按「變更」選好採計方式即可。'
+  if (!state.registered.has(cosId)) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'link'
+    btn.textContent = '變更'
+    btn.disabled = !state.regStatus.open
+    btn.addEventListener('click', () => chooseAttribution(course, btn))
+    line.append(' ', btn)
+  }
+  return line
+}
+
+function attributionChoices(course, options) {
+  const box = document.createElement('div')
+  box.className = 'choices'
+  box.append(options.length === 1 && options[0].source !== 'home' ? '在開課系所找不到，只找到：' : '改成：')
+  // 未指定（舊版加入）的課每個選項都可以選；已指定的，目前那一種不能再選
+  const current = describeAttribution(course) === '未指定' ? '' : attributionKey(course)
+  for (const option of options) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = option.label
+    btn.disabled = option.key === current
+    btn.addEventListener('click', () => changeAttribution(course, option, btn))
+    box.append(btn)
+  }
+  const cancel = document.createElement('button')
+  cancel.type = 'button'
+  cancel.className = 'link'
+  cancel.textContent = '取消'
+  cancel.addEventListener('click', () => {
+    state.choosing = null
+    render()
+  })
+  box.append(cancel)
+  return box
+}
+
+async function courseListFor(menu) {
+  const reply = await ask({ type: 'courselist', menu })
+  if (reply && reply.ok) return reply.list
+  throw Object.assign(new Error(replyProblem(reply)), { reply })
+}
+
+async function chooseAttribution(course, btn) {
+  const cosId = String(course.cos_id)
+  btn.disabled = true
+  btn.textContent = '查詢中…'
+  showMessage('')
+  try {
+    const options = await findAttributionOptions({
+      cosId,
+      courseName: course.cos_cname,
+      depUids: courseDepUids(state.timetable.get(cosId)),
+      getTree: getDepTree,
+      getList: courseListFor,
+    })
+    if (!options.length) {
+      showMessage('在選課網找不到這門課的其他採計方式。', 'error')
+      render()
+      return
+    }
+    state.choosing = { cosId, options }
+    render()
+  } catch (err) {
+    showMessage(err && err.message ? err.message : '選課網沒有回應', 'error')
+    render()
+  }
+}
+
+// 目前預排的參數，改失敗時用來還原
+function currentPreregParams(course) {
+  const text = (v) => (v == null ? 'null' : String(v))
+  return {
+    cos_id: String(course.cos_id),
+    menu_data: String(course.menu_data || '{}').replace(/&quot;/g, '"'),
+    wType: String(course.wType || 'X'),
+    GroupName: text(course.GroupName),
+    GroupName_E: text(course.GroupName_E),
+    category_type: course.category_type == null ? '' : String(course.category_type),
+    category_cname: text(course.category_cname),
+    category_ename: text(course.category_ename),
+  }
+}
+
+async function changeAttribution(course, option, btn) {
+  const cosId = String(course.cos_id)
+  btn.disabled = true
+  btn.textContent = '變更中…'
+  const reply = await ask({ type: 'changepreregist', cosId, params: preregParams(cosId, option), previous: currentPreregParams(course) })
+  state.choosing = null
+  state.checks.delete(cosId)
+  if (!reply || !reply.ok) {
+    showMessage(replyProblem(reply), 'error')
+  } else if (reply.result && reply.result.status === 'added') {
+    showMessage(`${cosId} ${course.cos_cname || ''} 已改為「${option.label}」。`, 'ok')
+  } else {
+    showMessage(`變更失敗：${(reply.result && reply.result.msg) || '未知錯誤'}`, 'error')
+  }
+  await refreshRegistered()
+  render()
 }
 
 let depTreePromise = null
