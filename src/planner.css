@@ -117,3 +117,15 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .filters label.empty { opacity: .5; }
 .zero { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .zero p { flex-basis: 100%; margin: 0 0 4px; }
+
+/* 寬螢幕時左欄（格子＋篩選）固定在畫面上、自己捲動：捲動結果時仍看得到格子上的預覽 */
+@media (min-width: 961px) {
+  .layout > .left {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 6px;
+  }
+}
