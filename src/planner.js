@@ -462,6 +462,7 @@ function showToast(text, action) {
 
 // 從預排移除：content script 會先確認不是正式選課的課；成功後可以復原（用原本的採計方式加回去）
 async function removeFromPrereg(item) {
+  showToast('移除中…')
   const record = preregItem(item.cosId)
   const reply = await askCos({ type: 'removepreregist', cosId: item.cosId })
   if (!reply || !reply.ok) return showToast(needsCos(reply) ? '請先開啟並登入選課網' : cosProblem(reply))
@@ -472,6 +473,10 @@ async function removeFromPrereg(item) {
     src.courses = (src.courses || []).filter((c) => String(c.cos_id) !== String(item.cosId))
     await chrome.storage.local.set({ schedule })
   }
+  // 這門課的查詢結果（inPrereg: true 的列）跟著舊的採計方式，移除後不再適用，
+  // 不清掉的話左邊結果卡片還是看得到登記／加選按鈕，送出時也不會先加回預排
+  addState.delete(String(item.cosId))
+  renderResults()
   showToast(`已從預排移除 ${item.title}`, record ? { label: '復原', run: () => restorePrereg(item, record) } : null)
   syncStatus()
 }
@@ -480,6 +485,9 @@ async function restorePrereg(item, record) {
   const id = String(item.cosId)
   const reply = await askCos({ type: 'import', ids: [id], params: { [id]: restoreParams(record) } })
   const result = reply && reply.ok && reply.results && reply.results[0]
+  // 復原後查詢狀態一樣是舊資料，一併清掉，讓結果卡片重新反映現在的預排狀態
+  addState.delete(id)
+  renderResults()
   if (result && (result.status === 'added' || result.status === 'exists')) showToast(`已復原 ${item.title}`)
   else showToast(`復原失敗：${result ? result.msg || '加入失敗' : cosProblem(reply)}。請到選課網重新加入。`)
   syncStatus()
@@ -520,6 +528,7 @@ async function init() {
     home: document.querySelector('.plan-pane'),
     narrowSlot: $('#narrow-slot'),
     initialOpen: state.filterOpen,
+    detail,
     onToggle: (open) => {
       state.filterOpen = open
       save()
