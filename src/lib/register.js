@@ -90,7 +90,7 @@ export async function resolveRegInfo({ course, timetableMenu, askRegInfo, getDep
 
 export function describeAvailability(record) {
   if (!record) {
-    return { canRegister: false, needsWish: false, groupUid: '', seats: '', reasons: [], message: '查不到這門課的加選資訊' }
+    return { canRegister: false, needsWish: false, action: '', groupUid: '', seats: '', reasons: [], message: '查不到這門課的加選資訊' }
   }
   const canRegister = str(record.status) === 'success'
   const message = canRegister ? '' : str(record.cmsg) || str(record.emsg) || '選課網不允許加選這門課'
@@ -104,6 +104,7 @@ export function describeAvailability(record) {
   return {
     canRegister,
     needsWish: Boolean(record.GroupUID),
+    action: regAction(record),
     groupUid: str(record.GroupUID),
     seats: formatSeats({ limit: record.num_limit, enrolled: record.registered_num }),
     reasons,
@@ -130,26 +131,50 @@ export function wishOptions(group, record) {
   return options
 }
 
-// 「已登記」和「已選上」不同：分發課程登記志願後 sFlag 會是志願序數字，
-// 等分發結果出來才會變成 F。
+// 選課網送出時的動作（chunk-b47d6638 cosRegist）：送出的 wish 就是登記後的 sFlag。
+// wish：有志願群組，送使用者選的志願序（登記，等分發）
+// signup：沒有群組但有人數上限，送 "1"（登記，等分發）
+// add：沒有群組又不限人數，送 "F"（加選，直接選上）
+export function regAction(record) {
+  if (!record) return ''
+  if (str(record.GroupUID)) return 'wish'
+  return str(record.num_limit).trim() === '不限' ? 'add' : 'signup'
+}
+
+export const ACTION_LABELS = { wish: '登記', signup: '登記', add: '加選' }
+export const AVAILABLE_TEXT = { wish: '可登記（志願序，等分發）', signup: '可登記（等分發）', add: '可加選（直接選上）' }
+
+// 選課網的顯示規則（chunk-6321b656）：PFW 是 W → 停修；sFlag 是 F → 已選；
+// 其他都是已登記（等分發），有志願群組時 sFlag 是志願序。Lock 是 1 時選課網不給退選。
 export function registrationState(course) {
   const sFlag = str(course && course.sFlag)
+  const locked = str(course && course.Lock) === '1'
+  if (str(course && course.PFW) === 'W') return { state: 'withdrawn', wishNo: null, locked }
+  if (sFlag === 'F') return { state: 'registered', wishNo: null, locked }
   const group = str(course && course.GroupUID)
-  if (group && /^\d+$/.test(sFlag)) return { state: 'wish', wishNo: Number(sFlag) }
-  return { state: 'registered', wishNo: null }
+  return { state: 'wish', wishNo: group && /^\d+$/.test(sFlag) ? Number(sFlag) : null, locked }
+}
+
+// 短標籤：「已登記・第 2 志願」「已登記・等分發」
+export function wishLabel(wishNo) {
+  return wishNo ? `已登記・第 ${wishNo} 志願` : '已登記・等分發'
 }
 
 export function describeRegistration(course) {
-  const { state, wishNo } = registrationState(course)
-  return state === 'wish' ? `已登記（第 ${wishNo} 志願）` : '已選上'
+  const { state, wishNo, locked } = registrationState(course)
+  if (state === 'withdrawn') return '停修'
+  if (state === 'registered') return locked ? '已選上（鎖定）' : '已選上'
+  return wishNo ? `已登記（第 ${wishNo} 志願）` : '已登記（等分發）'
 }
 
 export function registerParams(record, wish) {
+  const action = regAction(record)
+  const sent = action === 'add' ? 'F' : action === 'signup' ? '1' : wish === 0 || wish ? str(wish) : ''
   return {
     cos_id: str(record && record.cos_id),
     cos_type_code: str(record && record.cos_type_code),
     wType: str(record && record.wType),
-    wish: wish === 0 || wish ? str(wish) : '',
+    wish: sent,
     category_type: str(record && record.category_type),
   }
 }
@@ -167,6 +192,6 @@ export function parseRegResult(response) {
   }
   const first = Array.isArray(data) ? data[0] : data
   if (!first || typeof first !== 'object') return { ok: false, message: '選課網沒有回應內容' }
-  if (str(first.status) === 'success') return { ok: true, message: '加選成功' }
+  if (str(first.status) === 'success') return { ok: true, message: '送出成功' }
   return { ok: false, message: str(first.cmsg) || str(first.emsg) || '加選失敗' }
 }

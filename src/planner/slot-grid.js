@@ -142,7 +142,7 @@ export function createSlotGrid(container, { onChange }) {
   })
 
   return {
-    // occupied：時段 -> { kind, color, mark, titles }（正式選上、登記中、在預排、私人行程）
+    // occupied：時段 -> { kind, color, mark, titles }（已選上、已登記、在預排、私人行程）
     render(nextSelection, occupied = new Map()) {
       selection = new Set(nextSelection)
       for (const cell of container.querySelectorAll('.cell')) {

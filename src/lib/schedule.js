@@ -39,7 +39,7 @@ export function courseToItem(course, { source, semester }) {
     limit: str(course.num_limit),
     enrolled: str(course.registered_num),
     note: str(course.memo),
-    // 分發課程可能只是登記中，還沒真的選上
+    // 正式選課清單裡的課不一定選上：sFlag 不是 F 就只是已登記、等分發
     regState: source === 'registered' ? registrationState(course).state : '',
     wishNo: source === 'registered' ? registrationState(course).wishNo : null,
     slots: parseCosTime(course.cos_time),
@@ -151,7 +151,8 @@ export function scheduleItems(schedule, sources) {
     const src = (s.sources || {})[name]
     for (const course of (src && src.courses) || []) {
       const item = courseToItem(course, { source: name, semester: src.semester })
-      if (seen.has(item.cosId)) continue
+      // 停修的課不佔課表時段
+      if (item.regState === 'withdrawn' || seen.has(item.cosId)) continue
       seen.add(item.cosId)
       items.push(item)
     }

@@ -8,7 +8,7 @@
 
 - **新增權限 `alarms`**：只給選用的「每日自動登記」使用，預設關閉。安裝時不會多跳權限警告。
 - **主機權限沒變**：一樣只有 `cos.nycu.edu.tw` 與 `timetable.nycu.edu.tw`。
-- **新增頁面**：popup 課表分頁、週課表頁、選課頁、選課規劃頁。全部是擴充功能自己的頁面，沒有遠端程式碼。
+- **新增頁面**：popup 課表分頁、週課表頁、選課頁、當期選課頁。全部是擴充功能自己的頁面，沒有遠端程式碼。
 - **新增功能**：正式選課（加選、登記志願）。只會在使用者於確認視窗按下送出時執行，不提供退選。
 
 ## 1. 套件
@@ -33,7 +33,7 @@
 
 1. popup 課表分頁
 2. popup 找課與選採計方式
-3. 選課規劃：框選空堂找課
+3. 當期選課：框選空堂找課
 4. 查詢與登記確認視窗
 5. 每日自動登記
 
@@ -51,7 +51,7 @@
 
 | 權限 | 理由（直接貼上） |
 |---|---|
-| storage | `將使用者手動下載的公開課程資料、使用者自己的課表、選課規劃的時段與篩選條件、自動登記設定存在本機。不傳送到任何地方。` |
+| storage | `將使用者手動下載的公開課程資料、使用者自己的課表、當期選課的時段與篩選條件、自動登記設定存在本機。不傳送到任何地方。` |
 | alarms | 見下方，中英對照 |
 | 主機權限 | `cos.nycu.edu.tw：在選課系統頁面注入內容腳本，以使用者目前的登入狀態呼叫該網站自身的預排與選課 API。timetable.nycu.edu.tw：下載學校公開的課程時間表資料，建立搜尋用的課程清單。` |
 
@@ -89,7 +89,7 @@ This extension helps students of National Yang Ming Chiao Tung University (NYCU)
 Features that can be tested without a login:
 1. Click the toolbar icon, open the 「加入預排」 tab and click 「更新課程資料」. The extension downloads the public course timetable from timetable.nycu.edu.tw (about 1–3 minutes).
 2. Type a keyword such as 線性代數 into the search box to search all courses.
-3. Click 「規劃 ↗」 to open the planner page. Drag on the weekly grid to select time slots; courses that fit those slots are listed, and can be filtered by campus, category and department.
+3. Click 「當期選課 ↗」 to open the planner page. Drag on the weekly grid to select time slots; courses that fit those slots are listed, and can be filtered by campus, category and department.
 4. The 「課表」 tab and the weekly timetable page show the user's own courses (empty without a login; personal events can be added on the weekly timetable page).
 
 No data is sent to the developer or any third party. Course registration is only performed after the user confirms in a dialog, and the optional daily auto-registration is off by default.

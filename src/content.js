@@ -158,9 +158,11 @@ async function courseLists() {
     GroupName: c.GroupName,
     GroupName_E: c.GroupName_E,
     category_ename: c.category_ename,
-    // 分發課程登記志願後 sFlag 是志願序，分發完成才是 F
+    // 選課網的規則：sFlag 是 F 才是已選上，其他是已登記（有群組時是志願序）；PFW 是 W 是停修；Lock 是 1 不能退選
     sFlag: c.sFlag,
     GroupUID: c.GroupUID,
+    Lock: c.Lock,
+    PFW: c.PFW,
   })))
   return { preregist: slim(preregist), registered: slim(registered) }
 }

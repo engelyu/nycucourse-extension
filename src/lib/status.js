@@ -1,7 +1,7 @@
 // 本機記錄的課程狀態：來自 storage 的 schedule.sources（正式選課、預排），
-// 用來在選課規劃頁標示每門課、替格子上色。
+// 用來在當期選課頁標示每門課、替格子上色。
 import { scheduleItems } from './schedule.js'
-import { registrationState } from './register.js'
+import { registrationState, wishLabel } from './register.js'
 import { describeAttribution } from './attribution.js'
 
 // Okabe-Ito 配色：常見色弱（紅綠、藍黃）也分得出來；另外搭配文字標記，不只靠顏色
@@ -9,19 +9,20 @@ export const KIND_COLORS = { registered: '#009E73', wish: '#E69F00', preregist: 
 const CIRCLED = ['', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨']
 function markOf(kind, item) {
   if (kind === 'registered') return '✓'
-  if (kind === 'wish') return CIRCLED[item.wishNo] || '志'
+  if (kind === 'wish') return CIRCLED[item.wishNo] || '登'
   if (kind === 'preregist') return '預'
   return ''
 }
-export const KIND_LABELS = { registered: '正式選上', wish: '登記中', preregist: '在預排', manual: '私人行程' }
+export const KIND_LABELS = { registered: '已選上', wish: '已登記', preregist: '在預排', manual: '私人行程' }
 const PRIORITY = ['registered', 'wish', 'preregist', 'manual']
 
 export function courseStatuses(schedule) {
   const out = new Map()
   const sources = (schedule && schedule.sources) || {}
   for (const c of (sources.registered && sources.registered.courses) || []) {
-    const { state, wishNo } = registrationState(c)
-    out.set(String(c.cos_id), state === 'wish' ? { state: 'wish', wishNo, label: `登記中・第 ${wishNo} 志願` } : { state: 'registered', wishNo: null, label: '已選上' })
+    const { state, wishNo, locked } = registrationState(c)
+    if (state === 'withdrawn') continue
+    out.set(String(c.cos_id), state === 'wish' ? { state: 'wish', wishNo, label: wishLabel(wishNo) } : { state: 'registered', wishNo: null, label: locked ? '已選上（鎖定）' : '已選上' })
   }
   for (const c of (sources.preregist && sources.preregist.courses) || []) {
     const id = String(c.cos_id)
@@ -38,7 +39,7 @@ function kindOf(item) {
   return 'preregist'
 }
 
-// 格子上每個時段被什麼佔用；同一格有多種時依「正式選上 > 登記中 > 在預排 > 私人行程」
+// 格子上每個時段被什麼佔用；同一格有多種時依「已選上 > 已登記 > 在預排 > 私人行程」
 export function occupiedKinds(schedule) {
   const out = new Map()
   for (const item of scheduleItems(schedule, ['registered', 'preregist'])) {

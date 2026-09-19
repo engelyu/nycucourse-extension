@@ -1,4 +1,4 @@
-// 完整頁面（選課頁、選課規劃頁）與選課網分頁溝通：找一個已開啟的選課網分頁，經由 content script 送訊息
+// 完整頁面（選課頁、當期選課頁）與選課網分頁溝通：找一個已開啟的選課網分頁，經由 content script 送訊息
 
 export async function findCosTab() {
   const tabs = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
