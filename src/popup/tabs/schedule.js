@@ -5,6 +5,7 @@ import { scheduleItems, withSyncedSources, buildWeek, mergeBlocks } from '../../
 import { locateNow } from '../../lib/now.js'
 import { describeSlots } from '../../lib/periods.js'
 import { courseOutlineUrl } from '../../lib/links.js'
+import { wishLabel } from '../../lib/register.js'
 import { state } from '../shared.js'
 import { connectOnce, onCosChange, findCosTab } from '../cos.js'
 import { createCourseSearch } from '../course-search.js'
@@ -117,7 +118,7 @@ function renderDetail(week) {
   const lines = [
     describeSlots(item.slots),
     [block.room, item.teacher].filter(Boolean).join('・'),
-    item.regState === 'wish' ? `登記中・第 ${item.wishNo} 志願` : '',
+    item.regState === 'wish' ? wishLabel(item.wishNo) : '',
   ].filter(Boolean)
   const info = document.createElement('p')
   info.textContent = lines.join('\n')

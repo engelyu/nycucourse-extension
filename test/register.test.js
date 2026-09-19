@@ -104,12 +104,14 @@ test('沒有群組資料時沒有志願可選', () => {
   assert.deepEqual(wishOptions(null, peRecord), [])
 })
 
-test('registerParams 組出送出加選的欄位', () => {
+// 選課網（chunk-b47d6638 cosRegist）送出的 wish 就是登記後的 sFlag：
+// 有志願群組送志願序；沒有群組、有人數上限送 "1"（登記，等分發）；不限人數送 "F"（加選，直接選上）
+test('registerParams 依選課網的規則決定 wish', () => {
   assert.deepEqual(registerParams(okRecord, ''), {
     cos_id: '516701',
     cos_type_code: '1',
     wType: 'X',
-    wish: '',
+    wish: '1',
     category_type: '',
   })
   assert.deepEqual(registerParams(peRecord, 2), {
@@ -122,10 +124,25 @@ test('registerParams 組出送出加選的欄位', () => {
   assert.equal(registerParams({ ...okRecord, category_type: 'A501' }, '').category_type, 'A501')
 })
 
+// 2026-09-20 實測：實變函數論（一）536700 不限人數，選課網送 F 直接選上，擴充功能送空字串變成已登記
+test('不限人數又沒有志願群組的課送 F 直接加選', () => {
+  const real = { ...okRecord, cos_id: '536700', num_limit: '不限', GroupUID: null }
+  assert.equal(registerParams(real, '').wish, 'F')
+  assert.equal(registerParams(real, '3').wish, 'F')
+  assert.equal(registerParams({ ...okRecord, num_limit: '40' }, '2').wish, '1')
+})
+
+test('describeAvailability 分出加選、登記、志願登記三種動作', () => {
+  assert.equal(describeAvailability(okRecord).action, 'signup')
+  assert.equal(describeAvailability({ ...okRecord, num_limit: '不限' }).action, 'add')
+  assert.equal(describeAvailability(peRecord).action, 'wish')
+  assert.equal(describeAvailability(null).action, '')
+})
+
 test('parseRegResult 解讀加選結果', () => {
-  assert.deepEqual(parseRegResult([{ status: 'success', cmsg: '', emsg: '' }]), { ok: true, message: '加選成功' })
+  assert.deepEqual(parseRegResult([{ status: 'success', cmsg: '', emsg: '' }]), { ok: true, message: '送出成功' })
   assert.deepEqual(parseRegResult([{ status: 'error', cmsg: '人數已滿', emsg: 'Full' }]), { ok: false, message: '人數已滿' })
-  assert.deepEqual(parseRegResult({ status: 'success' }), { ok: true, message: '加選成功' })
+  assert.deepEqual(parseRegResult({ status: 'success' }), { ok: true, message: '送出成功' })
   assert.deepEqual(parseRegResult(''), { ok: false, message: '選課網沒有回應內容' })
   assert.deepEqual(parseRegResult('<html>'), { ok: false, message: '無法解析選課網回應' })
 })
@@ -173,24 +190,28 @@ test('通識課的加選資料帶有類別與志願群組', () => {
   })
 })
 
-test('registrationState 區分已選上與登記中', async () => {
+// 選課網（chunk-6321b656）的顯示規則：PFW 是 W → 停修；sFlag 是 F → 已選；
+// 其他 → 已登記，有志願群組時加「第 sFlag 志願」。Lock 是 1 時不能退選。
+test('registrationState 照選課網的規則分出已選上與已登記', async () => {
   const { registrationState } = await import('../src/lib/register.js')
-  // 有志願群組且 sFlag 是數字 → 登記中
-  assert.deepEqual(registrationState({ cos_id: '561068', sFlag: '1', GroupUID: '51CE2C18' }), { state: 'wish', wishNo: 1 })
-  // sFlag 是 F → 已選上，即使屬於志願群組
-  assert.deepEqual(registrationState({ cos_id: '515506', sFlag: 'F', GroupUID: 'CB7B23E2' }), { state: 'registered', wishNo: null })
-  assert.deepEqual(registrationState({ cos_id: '516700', sFlag: 'F', GroupUID: null }), { state: 'registered', wishNo: null })
-  // 沒有群組就算 sFlag 是數字也當成已選上
-  assert.deepEqual(registrationState({ cos_id: 'x', sFlag: '2', GroupUID: null }), { state: 'registered', wishNo: null })
-  assert.deepEqual(registrationState(null), { state: 'registered', wishNo: null })
+  assert.deepEqual(registrationState({ sFlag: '1', GroupUID: '51CE2C18' }), { state: 'wish', wishNo: 1, locked: false })
+  assert.deepEqual(registrationState({ sFlag: 'F', GroupUID: 'CB7B23E2' }), { state: 'registered', wishNo: null, locked: false })
+  assert.deepEqual(registrationState({ sFlag: 'F', GroupUID: null, Lock: '1' }), { state: 'registered', wishNo: null, locked: true })
+  // 沒有群組、sFlag 不是 F：已登記，沒有志願序
+  assert.deepEqual(registrationState({ sFlag: '1', GroupUID: null }), { state: 'wish', wishNo: null, locked: false })
+  assert.deepEqual(registrationState({ sFlag: '', GroupUID: null }), { state: 'wish', wishNo: null, locked: false })
+  assert.deepEqual(registrationState({ sFlag: 'F', PFW: 'W' }), { state: 'withdrawn', wishNo: null, locked: false })
+  assert.deepEqual(registrationState(null), { state: 'wish', wishNo: null, locked: false })
 })
 
 test('describeRegistration 產生畫面文字', async () => {
   const { describeRegistration } = await import('../src/lib/register.js')
   assert.equal(describeRegistration({ sFlag: '1', GroupUID: 'G' }), '已登記（第 1 志願）')
   assert.equal(describeRegistration({ sFlag: '3', GroupUID: 'G' }), '已登記（第 3 志願）')
+  assert.equal(describeRegistration({ sFlag: '1' }), '已登記（等分發）')
   assert.equal(describeRegistration({ sFlag: 'F', GroupUID: 'G' }), '已選上')
-  assert.equal(describeRegistration({ sFlag: 'F' }), '已選上')
+  assert.equal(describeRegistration({ sFlag: 'F', Lock: '1' }), '已選上（鎖定）')
+  assert.equal(describeRegistration({ sFlag: 'F', PFW: 'W' }), '停修')
 })
 
 // 2026-09-19 實測：擴充功能加入的預排 menu_data 是 {}，選課網用它查不到課

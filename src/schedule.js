@@ -1,5 +1,6 @@
 import { manualItem, slotsFromTimeRange, slotsFromPeriodRange, itemUrl, buildWeek, scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { PERIODS, DAY_NAMES, describeSlots } from './lib/periods.js'
+import { wishLabel } from './lib/register.js'
 
 const COS_URL = 'https://cos.nycu.edu.tw/#/emulator'
 const $ = (sel) => document.querySelector(sel)
@@ -58,7 +59,7 @@ function itemElement(item) {
   title.textContent = item.title
   const sub = document.createElement('span')
   sub.className = 'sub'
-  const wishTag = item.regState === 'wish' ? `登記中（第 ${item.wishNo} 志願）` : ''
+  const wishTag = item.regState === 'wish' ? wishLabel(item.wishNo) : ''
   sub.textContent = [item.room, item.teacher, wishTag].filter(Boolean).join(' · ')
   main.append(title, sub)
   main.title = [item.title, item.teacher, item.room, url ? '點擊開啟連結' : '尚未設定連結'].filter(Boolean).join('\n')

@@ -18,10 +18,10 @@ const schedule = {
   overrides: {},
 }
 
-test('courseStatuses 正式選課優先，登記中、在預排附標籤', () => {
+test('courseStatuses 正式選課優先，已登記、在預排附標籤', () => {
   const s = courseStatuses(schedule)
   assert.deepEqual(s.get('1'), { state: 'registered', wishNo: null, label: '已選上' })
-  assert.deepEqual(s.get('2'), { state: 'wish', wishNo: 2, label: '登記中・第 2 志願' })
+  assert.deepEqual(s.get('2'), { state: 'wish', wishNo: 2, label: '已登記・第 2 志願' })
   assert.deepEqual(s.get('3'), { state: 'preregist', wishNo: null, label: '在預排・選修' })
   assert.deepEqual(s.get('4'), { state: 'preregist', wishNo: null, label: '在預排・未指定採計' })
   assert.equal(s.get('9'), undefined)
@@ -47,4 +47,15 @@ test('occupiedKinds 附上非顏色的標記：已選上 ✓、登記中志願�
   assert.equal(k.get('4-5').mark, '②')
   assert.equal(k.get('2-3').mark, '預')
   assert.equal(k.get('3-a').mark, '')
+})
+
+test('courseStatuses 照選課網規則：sFlag 不是 F 就是已登記，停修不列', () => {
+  const s = courseStatuses({ sources: { registered: { courses: [
+    { cos_id: 'a', sFlag: '', GroupUID: null },
+    { cos_id: 'b', sFlag: 'F', Lock: '1' },
+    { cos_id: 'c', sFlag: 'F', PFW: 'W' },
+  ] } } })
+  assert.deepEqual(s.get('a'), { state: 'wish', wishNo: null, label: '已登記・等分發' })
+  assert.deepEqual(s.get('b'), { state: 'registered', wishNo: null, label: '已選上（鎖定）' })
+  assert.equal(s.get('c'), undefined)
 })

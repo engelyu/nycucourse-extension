@@ -1,6 +1,7 @@
 // 找空堂的結果清單：分「完全落在內」「部分重疊」兩組；滑過卡片在格子上預覽時段
 import { courseSlots, courseCategories, describeKeys, campusName } from '../lib/freeslots.js'
 import { courseOutlineUrl } from '../lib/links.js'
+import { ACTION_LABELS, AVAILABLE_TEXT } from '../lib/register.js'
 
 const span = (className, textContent) => Object.assign(document.createElement('span'), { className, textContent })
 
@@ -81,10 +82,10 @@ function card(hit, ctx) {
       r.className = 'query-row'
       const a = row.availability
       const ok = a.canRegister
-      const text = ok ? [a.needsWish ? '可登記（志願序）' : '可加選', a.seats, ...a.reasons].filter(Boolean).join('・') : [(a.message || '不能選').replace(/[。.]\s*$/, ''), a.seats].filter(Boolean).join('・')
+      const text = ok ? [AVAILABLE_TEXT[a.action], a.seats, ...a.reasons].filter(Boolean).join('・') : [(a.message || '不能選').replace(/[。.]\s*$/, ''), a.seats].filter(Boolean).join('・')
       r.append(span('how', row.label), span(ok ? 'avail ok' : 'avail error', text))
       if (ok) {
-        const label = status && status.state === 'wish' && a.needsWish ? '改志願' : a.needsWish ? '登記' : '加選'
+        const label = status && status.state === 'wish' && a.needsWish ? '改志願' : ACTION_LABELS[a.action]
         r.append(button(label, row.inPrereg ? '開啟確認視窗' : '先加入預排，再開啟確認視窗', () => ctx.onRegister(course, row)))
       }
       box.append(r)

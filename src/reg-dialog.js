@@ -1,6 +1,18 @@
-// 加選／登記的確認視窗，選課頁與選課規劃頁共用。只有使用者按「送出加選／送出登記」才會送出。
+// 加選／登記的確認視窗，選課頁與當期選課頁共用。只有使用者按「送出加選／送出登記」才會送出。
 // 按鈕寫出具體動作、不預設焦點在送出（NN/g 確認視窗準則）。
-import { wishOptions, registerParams, parseRegResult } from './lib/register.js'
+import { wishOptions, registerParams, parseRegResult, ACTION_LABELS } from './lib/register.js'
+
+// 和選課網相同：有人數上限的課是登記、等分發；不限人數的課直接加選
+const SUBMIT_TEXT = {
+  wish: '送出後會登記這個志願，分發後才知道有沒有選上。',
+  signup: '這門課有人數上限，送出後是「已登記」，分發後才知道有沒有選上。',
+  add: '這門課不限人數，送出後會直接選上。',
+}
+const DONE_TEXT = {
+  wish: (wish) => `已登記第 ${wish} 志願，等分發`,
+  signup: () => '已登記，等分發',
+  add: () => '已加選（已選上）',
+}
 import { askCos, cosProblem } from './cos-tab.js'
 
 const HTML = `
@@ -60,7 +72,7 @@ export function createRegisterDialog() {
       const reply = await askCos({ type: 'register', params: registerParams(record, wish) })
       if (!reply || !reply.ok) return showError(cosProblem(reply))
       const result = parseRegResult(reply.text)
-      finish({ ok: result.ok, message: result.ok && availability.needsWish ? `已登記第 ${wish} 志願` : result.message, wish })
+      finish({ ok: result.ok, message: result.ok ? DONE_TEXT[availability.action](wish) : result.message, wish })
     } finally {
       btn.disabled = false
       btn.textContent = label
@@ -91,9 +103,10 @@ export function createRegisterDialog() {
     // heading：「課號 課名」；detail：「老師 · 時段」；check：{ record, availability }；groups：志願群組
     open({ heading, detail, check, groups }) {
       const { availability, record } = check
-      q('#confirm-title').textContent = availability.needsWish ? '確認登記' : '確認加選'
-      q('#btn-submit').textContent = availability.needsWish ? '送出登記' : '送出加選'
-      const lines = [heading, detail, availability.seats, availability.reasons.length ? `注意：${availability.reasons.join('、')}` : '', availability.needsWish ? '送出後會真的登記這個志願。' : '送出後會真的加選這門課。'].filter(Boolean)
+      const verb = ACTION_LABELS[availability.action] || '加選'
+      q('#confirm-title').textContent = `確認${verb}`
+      q('#btn-submit').textContent = `送出${verb}`
+      const lines = [heading, detail, availability.seats, availability.reasons.length ? `注意：${availability.reasons.join('、')}` : '', SUBMIT_TEXT[availability.action] || ''].filter(Boolean)
       q('#confirm-body').replaceChildren(...lines.flatMap((line, i) => (i ? [document.createElement('br'), document.createTextNode(line)] : [document.createTextNode(line)])))
       q('#confirm-error').hidden = true
       renderWishes(availability, record, groups)

@@ -45,7 +45,7 @@ export function timeWarning(timeHHMM, closed = DEFAULT_CLOSED) {
     : ''
 }
 
-// 這次要登記哪些課：已選上的不用再登記，已登記且志願相同的也跳過
+// 這次要登記哪些課：已選上、停修的不送；已登記且志願相同（或沒有志願序）的也跳過
 export function buildPlan(items, registeredByCosId) {
   const todo = []
   const skipped = []
@@ -55,8 +55,12 @@ export function buildPlan(items, registeredByCosId) {
     const record = registered[cosId]
     if (record) {
       const { state, wishNo } = registrationState(record)
-      if (state === 'registered') {
-        skipped.push({ cosId, title: str(item.title), reason: '已選上' })
+      if (state === 'registered' || state === 'withdrawn') {
+        skipped.push({ cosId, title: str(item.title), reason: state === 'registered' ? '已選上' : '已停修' })
+        continue
+      }
+      if (wishNo === null) {
+        skipped.push({ cosId, title: str(item.title), reason: '已登記，等分發' })
         continue
       }
       if (str(wishNo) === str(item.wish)) {

@@ -1,4 +1,4 @@
-import { describeAvailability, menuForCourse, resolveRegInfo, registrationState, describeRegistration } from './lib/register.js'
+import { describeAvailability, menuForCourse, resolveRegInfo, registrationState, describeRegistration, ACTION_LABELS, AVAILABLE_TEXT } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
@@ -14,7 +14,7 @@ const state = {
   courses: [], // 預排課程（要加選的候選）
   menus: new Map(), // cosId -> 課程時間表的查詢條件
   timetable: new Map(), // cosId -> 課程時間表的課程資料（含出現過的所有系所）
-  registered: new Map(), // 課號 -> 選課網的紀錄（已選上或登記中）
+  registered: new Map(), // 課號 -> 選課網的紀錄（已選上或已登記）
   groups: {}, // 分發群組（志願序）
   checks: new Map(), // cosId -> { availability, record }
   auto: { enabled: false, time: '13:00', items: [], log: [] }, // 每日自動登記設定
@@ -63,9 +63,9 @@ async function load() {
 
 function renderStatus() {
   const all = [...state.registered.values()]
-  const wishCount = all.filter((c) => registrationState(c).state === 'wish').length
-  const bits = [`預排 ${state.courses.length} 門`, `已選上 ${all.length - wishCount} 門`]
-  if (wishCount) bits.push(`登記中 ${wishCount} 門`)
+  const count = (s) => all.filter((c) => registrationState(c).state === s).length
+  const bits = [`預排 ${state.courses.length} 門`, `已選上 ${count('registered')} 門`]
+  if (count('wish')) bits.push(`已登記 ${count('wish')} 門`)
   const missing = state.courses.filter((c) => !menuForCourse(c, state.menus.get(String(c.cos_id)))).length
   if (missing) bits.push(`${missing} 門缺查詢資料，請重新同步或更新課程資料`)
   $('#status').textContent = bits.join('　|　')
@@ -87,8 +87,8 @@ function stateCell(cosId) {
     return span
   }
   const { availability } = check
-  span.className = availability.canRegister ? (availability.needsWish ? 'state-wish' : 'state-ok') : 'state-blocked'
-  span.textContent = availability.canRegister ? (availability.needsWish ? '可登記（需志願序）' : '可加選') : availability.message
+  span.className = availability.canRegister ? (availability.action === 'add' ? 'state-ok' : 'state-wish') : 'state-blocked'
+  span.textContent = availability.canRegister ? AVAILABLE_TEXT[availability.action] : availability.message
   if (availability.reasons.length) {
     const reasons = document.createElement('span')
     reasons.className = 'reasons'
@@ -135,9 +135,9 @@ function render() {
     const act = document.createElement('td')
     act.className = 'actions-cell'
     const regRecord = state.registered.get(cosId)
-    const isWish = regRecord && registrationState(regRecord).state === 'wish'
-    if (isWish) {
-      // 登記中的課還可以改志願，和選課網一樣
+    const regState = regRecord && registrationState(regRecord)
+    if (regState && regState.state === 'wish' && regState.wishNo) {
+      // 已登記志願的課還可以改志願，和選課網一樣
       const again = document.createElement('button')
       again.type = 'button'
       again.textContent = '改志願'
@@ -152,7 +152,7 @@ function render() {
       const hasMenu = Boolean(menuForCourse(course, state.menus.get(cosId)))
       const btn = document.createElement('button')
       btn.type = 'button'
-      btn.textContent = check && check.availability.canRegister ? (check.availability.needsWish ? '登記' : '加選') : '查詢'
+      btn.textContent = check && check.availability.canRegister ? ACTION_LABELS[check.availability.action] : '查詢'
       btn.disabled = !hasMenu || !state.regStatus.open
       btn.title = hasMenu ? '' : '需要先在 popup 按「更新課程資料」，或到課表分頁重新同步'
       btn.addEventListener('click', () => (check && check.availability.canRegister ? openConfirm(course, check) : checkCourse(course, btn)))

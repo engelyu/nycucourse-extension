@@ -71,6 +71,23 @@ test('登記中但想改志願時會重新登記', () => {
   assert.deepEqual(plan.skipped, [])
 })
 
+// 選課網規則：沒有群組、sFlag 不是 F 就是已登記等分發，重送沒有意義；停修的課也不送
+test('已登記等分發、停修的課不重送', () => {
+  const items = [
+    { cosId: '516701', wish: '', title: '計概' },
+    { cosId: '536700', wish: '', title: '實變' },
+    { cosId: '515506', wish: '', title: '停修課' },
+  ]
+  const registered = {
+    516701: { cos_id: '516701', sFlag: '1', GroupUID: null },
+    536700: { cos_id: '536700', sFlag: '', GroupUID: null },
+    515506: { cos_id: '515506', sFlag: 'F', PFW: 'W' },
+  }
+  const plan = buildPlan(items, registered)
+  assert.deepEqual(plan.todo, [])
+  assert.deepEqual(plan.skipped.map((s) => s.reason), ['已登記，等分發', '已登記，等分發', '已停修'])
+})
+
 test('沒有設定課程時計畫是空的', () => {
   assert.deepEqual(buildPlan([], {}), { todo: [], skipped: [] })
   assert.deepEqual(buildPlan(null, null), { todo: [], skipped: [] })
