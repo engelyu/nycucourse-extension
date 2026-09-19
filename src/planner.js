@@ -1,7 +1,7 @@
 // 當期選課頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
-import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations } from './lib/freeslots.js'
+import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
 import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution } from './lib/attribution.js'
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
@@ -9,6 +9,7 @@ import { findCosTab, askCos, cosProblem } from './cos-tab.js'
 import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
+import { createFilterPanel } from './planner/filter-panel.js'
 
 const $ = (sel) => document.querySelector(sel)
 const VALID = new Set(ALL_SLOTS)
@@ -20,11 +21,13 @@ const state = {
   filters: { ...DEFAULT_FILTERS },
   schedule: { sources: {}, manual: [], overrides: {} },
   courseData: null,
+  filterOpen: true,
 }
 const addState = new Map() // 課號 -> { status: 'pending'|'choose'|'added'|'exists'|'error', ... }
 let grid = null
 let deptPicker = null
 let depTree = null
+let panel = null
 
 const courses = () => (state.courseData && state.courseData.courses) || []
 
@@ -32,7 +35,7 @@ const courses = () => (state.courseData && state.courseData.courses) || []
 
 async function save() {
   try {
-    await chrome.storage.local.set({ planner: { selection: [...state.selection], filters: state.filters } })
+    await chrome.storage.local.set({ planner: { selection: [...state.selection], filters: state.filters, filterOpen: state.filterOpen } })
   } catch {}
 }
 
@@ -40,6 +43,7 @@ function restore(saved) {
   if (!saved || typeof saved !== 'object') return
   if (Array.isArray(saved.selection)) state.selection = new Set(saved.selection.filter((k) => VALID.has(k)))
   if (saved.filters && typeof saved.filters === 'object') state.filters = { ...DEFAULT_FILTERS, ...saved.filters }
+  if (typeof saved.filterOpen === 'boolean') state.filterOpen = saved.filterOpen
 }
 
 // ---------- 時段 ----------
@@ -154,26 +158,16 @@ function renderZero(list) {
   $('#results').replaceChildren(box)
 }
 
-function input(id, attrs) {
-  return Object.assign(document.createElement('input'), { id, ...attrs })
-}
-
 function buildFilters() {
   const f = state.filters
   const form = $('#filters')
   form.replaceChildren()
 
-  const sort = document.createElement('select')
-  sort.id = 'sort'
-  for (const o of SORT_OPTIONS) sort.append(new Option(o.label, o.id, false, o.id === f.sort))
   form.append(
     fieldset(
       '比對方式',
       choice('radio', 'mode', 'inside', '完全落在內', f.mode !== 'overlap'),
       choice('radio', 'mode', 'overlap', '部分重疊', f.mode === 'overlap'),
-      Object.assign(document.createElement('span'), { className: 'spacer' }),
-      Object.assign(document.createElement('label'), { textContent: '排序 ', htmlFor: 'sort' }),
-      sort,
     ),
   )
 
@@ -195,8 +189,9 @@ function buildFilters() {
   })
   deptPicker.update(depCounts(courses()), f.deps)
 
-  form.append(fieldset('關鍵字', input('keyword', { type: 'search', value: f.keyword, placeholder: '課名、老師或課號' })))
-
+  const sort = $('#sort')
+  sort.replaceChildren(...SORT_OPTIONS.map((o) => new Option(o.label, o.id, false, o.id === f.sort)))
+  $('#keyword').value = f.keyword
 }
 
 function readFilters() {
@@ -218,6 +213,7 @@ function readFilters() {
 
 function renderResults() {
   const list = courses()
+  if (panel) panel.setCount(appliedCount(state.filters, state.selection))
   const summary = $('#summary')
   if (!list.length) {
     summary.textContent = '還沒有課程資料，請先在擴充功能的「加入預排」按「更新課程資料」。'
@@ -225,7 +221,7 @@ function renderResults() {
     return
   }
   if (!state.selection.size) {
-    summary.textContent = '先在左邊框選時段，或按「帶入空堂」。'
+    summary.textContent = '先按「篩選」框選時段，或在篩選裡按「帶入空堂」。'
     $('#results').replaceChildren()
     return
   }
@@ -412,8 +408,7 @@ function statusAtText() {
   return `狀態更新於 ${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function renderLegend() {
-  const legend = $('#legend')
+function renderLegend(legend) {
   legend.replaceChildren(
     ...Object.entries(KIND_LABELS).map(([kind, label]) => {
       const item = document.createElement('span')
@@ -443,6 +438,18 @@ async function init() {
   state.courseData = stored.courseData || null
   grid = createSlotGrid($('#grid'), { onChange: setSelection })
   dialog = createRegisterDialog()
+  panel = createFilterPanel({
+    panel: $('#filter-panel'),
+    toggle: $('#filter-toggle'),
+    close: $('#filter-close'),
+    home: document.querySelector('.plan-pane'),
+    narrowSlot: $('#narrow-slot'),
+    initialOpen: state.filterOpen,
+    onToggle: (open) => {
+      state.filterOpen = open
+      save()
+    },
+  })
   buildFilters()
   $('#filters').addEventListener('input', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()
@@ -450,7 +457,10 @@ async function init() {
   $('#filters').addEventListener('change', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()
   })
-  renderLegend()
+  $('#keyword').addEventListener('input', readFilters)
+  $('#sort').addEventListener('change', readFilters)
+  renderLegend($('#legend'))
+  renderLegend($('#grid-legend'))
   $('#refresh-status').addEventListener('click', async () => {
     const btn = $('#refresh-status')
     btn.disabled = true

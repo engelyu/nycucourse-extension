@@ -9,10 +9,7 @@
 }
 body { margin: 0; padding: 20px 24px; font: 14px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; background: Canvas; color: CanvasText; }
 h1 { margin: 0; font-size: 22px; }
-.sub, .muted { color: var(--muted); }
-.sub { margin: 2px 0 14px; }
-.layout { display: grid; grid-template-columns: minmax(440px, 580px) minmax(0, 1fr); gap: 28px; align-items: start; }
-@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+.muted { color: var(--muted); }
 .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tip { font-size: 12px; margin: 6px 0 8px; }
 button { font: inherit; padding: 4px 10px; cursor: pointer; }
@@ -58,7 +55,6 @@ button { font: inherit; padding: 4px 10px; cursor: pointer; }
 .filters label { white-space: nowrap; }
 .filters .spacer { flex: 1; }
 .filters input[type="number"] { width: 64px; }
-.filters input[type="search"] { flex: 1; min-width: 180px; }
 .filters .hint { flex-basis: 100%; margin: 0; font-size: 12px; }
 
 /* 系所多選 */
@@ -77,7 +73,7 @@ button { font: inherit; padding: 4px 10px; cursor: pointer; }
 
 /* 結果 */
 .summary { font-weight: 600; margin: 0 0 6px; }
-.right h2 { font-size: 14px; margin: 14px 0 6px; }
+.results-pane h2 { font-size: 14px; margin: 14px 0 6px; }
 .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .card { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .card:hover { border-color: var(--accent); }
@@ -118,19 +114,36 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .zero { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .zero p { flex-basis: 100%; margin: 0 0 4px; }
 
-/* 寬螢幕時左欄（格子＋篩選）固定在畫面上、自己捲動：捲動結果時仍看得到格子上的預覽 */
-@media (min-width: 961px) {
-  .layout > .left {
-    position: sticky;
-    top: 12px;
-    max-height: calc(100vh - 24px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 6px;
-  }
-}
-
 /* 格子的列：保持同一個 CSS grid；鍵盤焦點要看得到 */
 .slot-grid .row, .slot-grid .hwrap { display: contents; }
 .slot-grid .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .slot-grid .head:focus-visible { outline: 2px solid var(--accent); }
+
+/* ---------- 版面：左搜尋結果、右正式課表 ---------- */
+
+.page-head { display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: baseline; margin-bottom: 12px; }
+.page-head .status-bar { margin: 0; }
+.layout { display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 55fr); gap: 24px; align-items: start; }
+
+/* 左欄：工具列固定在頂端 */
+.results-bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; padding: 8px 0; background: Canvas; }
+.results-bar #keyword { flex: 1; min-width: 0; padding: 4px 8px; font: inherit; }
+.results-bar #filter-toggle.active { background: var(--sel); border-color: var(--accent); }
+.sort-label { white-space: nowrap; font-size: 13px; color: var(--muted); }
+
+/* 右欄：固定在畫面上自己捲動；篩選面板蓋在課表上 */
+/* Task 4 才會畫真正的課表，這裡先保留高度，讓篩選面板（絕對定位、蓋滿右欄）有地方展開 */
+.timetable { min-height: 420px; }
+.plan-pane { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.filter-panel { position: absolute; inset: 0; z-index: 3; overflow-y: auto; padding: 0 4px 12px; background: Canvas; }
+.filter-panel[hidden] { display: none; }
+.plan-pane:has(.filter-panel:not([hidden])) { overflow: hidden; }
+.panel-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 6px 0; background: Canvas; border-bottom: 1px solid var(--line); }
+.panel-head h2 { margin: 0; font-size: 16px; }
+.panel-block h3 { margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 899px) {
+  .layout { grid-template-columns: 1fr; }
+  .plan-pane { position: static; max-height: none; overflow: visible; }
+  .filter-panel { position: static; margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 10px; }
+}
