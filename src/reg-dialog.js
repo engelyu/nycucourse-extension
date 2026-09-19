@@ -37,6 +37,10 @@ export function createRegisterDialog() {
     if (p) p.resolve(value)
   }
 
+  // 選了志願就收起「請先選擇第幾志願」
+  q('#wish-options').addEventListener('change', () => {
+    q('#confirm-error').hidden = true
+  })
   q('#btn-cancel').addEventListener('click', () => finish(null))
   dialog.addEventListener('cancel', () => finish(null))
   q('#btn-submit').addEventListener('click', async () => {
