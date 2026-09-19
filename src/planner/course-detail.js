@@ -11,8 +11,16 @@ export function createCourseDetail(dialog, ctx) {
   let current = null // { item, anchor }
 
   const close = () => {
+    const prior = current
     current = null
     if (dialog.open) dialog.close()
+    if (!prior) return
+    // 焦點回到原本點開小卡的按鈕；卡片被移除預排、課表重畫後按鈕不見了，就找同一堂課在課表上的第一個按鈕
+    if (prior.anchor && prior.anchor.isConnected) prior.anchor.focus()
+    else {
+      const card = [...document.querySelectorAll('.tt-course')].find((c) => c.dataset.item === prior.item.key)
+      if (card) card.focus()
+    }
   }
   dialog.addEventListener('close', () => {
     current = null
@@ -20,6 +28,7 @@ export function createCourseDetail(dialog, ctx) {
   dialog.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       e.preventDefault()
+      e.stopPropagation() // 面板的 document 層 Esc 監聽也會收到這個事件，擋掉避免關了小卡又關面板
       close()
     }
   })
@@ -118,6 +127,7 @@ export function createCourseDetail(dialog, ctx) {
       draw()
       place(current.anchor.isConnected ? current.anchor : null)
     },
+    isOpen: () => dialog.open,
     close,
   }
 }

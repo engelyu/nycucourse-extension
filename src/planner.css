@@ -141,8 +141,9 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .panel-block h3 { margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
 
 @media (min-width: 900px) {
-  /* 面板開著時，絕對定位的它跟著 .plan-pane 的內容高度走；#timetable 現在還是空的（Task 4 才畫），
-     撐到滿版高度，面板才有整個視窗高可以用、內容自己捲動，而不是被卡在課表目前的高度 */
+  /* 面板是 position:absolute，脫離文件流不會撐開 .plan-pane 的高度；.plan-pane 的高度只看 #timetable
+     內容多寡，課表短的時候面板會被裁到那個高度。用這個 min-height 撐到滿版高，面板才有整個視窗高
+     可以用、內容自己捲動，而不是被卡在課表目前的高度 */
   .plan-pane:has(.filter-panel:not([hidden])) { min-height: calc(100vh - 24px); }
 }
 
