@@ -52,22 +52,6 @@ code { font-family: ui-monospace, Menlo, monospace; }
 #auto-list li, #auto-log li { font-size: 13px; }
 #auto-log li.failed span { color: var(--error); }
 
-.wish-label { margin: 12px 0 6px; font-size: 13px; }
-.wish-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.wish-options label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-.wish-options label.taken { color: var(--muted); }
-.wish-options .reserved { color: var(--muted); font-size: 12px; }
-#confirm { min-width: 460px; }
-#confirm h2 { margin: 0 0 10px; font-size: 16px; }
-#confirm-body { margin: 0; font-size: 14px; line-height: 1.6; }
 
 /* 採計方式 */
 td .attribution button.link,

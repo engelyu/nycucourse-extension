@@ -1,0 +1,22 @@
+/* 加選／登記確認視窗（reg-dialog.js），選課頁與選課規劃頁共用 */
+.reg-dialog { min-width: 460px; max-width: 560px; border: 1px solid rgba(127, 127, 127, .35); border-radius: 12px; padding: 18px 20px; }
+.reg-dialog::backdrop { background: rgba(0, 0, 0, .35); }
+.reg-dialog h2 { margin: 0 0 10px; font-size: 16px; }
+.reg-dialog #confirm-body { margin: 0; font-size: 14px; line-height: 1.6; }
+.reg-dialog .wish-label { margin: 12px 0 6px; font-size: 13px; }
+.reg-dialog .wish-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.reg-dialog .wish-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(127, 127, 127, .3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.reg-dialog .wish-options label.taken,
+.reg-dialog .wish-options .reserved { color: #6b7280; }
+.reg-dialog .wish-options .reserved { font-size: 12px; }
+.reg-dialog .dialog-error { color: #c62828; font-size: 13px; margin: 10px 0 0; }
+.reg-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.reg-dialog button { font: inherit; padding: 4px 12px; cursor: pointer; }

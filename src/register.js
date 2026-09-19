@@ -1,4 +1,5 @@
-import { describeAvailability, wishOptions, registerParams, parseRegResult, menuForCourse, resolveRegInfo, registrationState, describeRegistration } from './lib/register.js'
+import { describeAvailability, menuForCourse, resolveRegInfo, registrationState, describeRegistration } from './lib/register.js'
+import { createRegisterDialog } from './reg-dialog.js'
 import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
@@ -16,7 +17,6 @@ const state = {
   registered: new Map(), // 課號 -> 選課網的紀錄（已選上或登記中）
   groups: {}, // 分發群組（志願序）
   checks: new Map(), // cosId -> { availability, record }
-  pending: null, // 確認中的課程
   auto: { enabled: false, time: '13:00', items: [], log: [] }, // 每日自動登記設定
   autoNext: null, // 下次自動執行的時間
   regStatus: { open: true, message: '' }, // 選課系統是否開放（checkreg）
@@ -329,86 +329,21 @@ async function loadGroups() {
   if (reply && reply.ok && reply.groups && typeof reply.groups === 'object') state.groups = reply.groups
 }
 
-function openConfirm(course, check) {
-  state.pending = { course, check }
-  const { availability, record } = check
-  $('#confirm-title').textContent = availability.needsWish ? '確認登記' : '確認加選'
-  const lines = [
-    `${course.cos_id} ${course.cos_cname}`,
-    [course.lecturers, describeSlots(parseCosTime(course.cos_time))].filter(Boolean).join(' · '),
-    availability.seats,
-    availability.reasons.length ? `注意：${availability.reasons.join('、')}` : '',
-    '送出後會真的加選這門課。',
-  ].filter(Boolean)
-  $('#confirm-body').replaceChildren(...lines.flatMap((line, i) => (i ? [document.createElement('br'), document.createTextNode(line)] : [document.createTextNode(line)])))
-  $('#confirm-error').hidden = true
+let dialog = null
 
-  const wishBlock = $('#wish-block')
-  const options = availability.needsWish ? wishOptions(state.groups[availability.groupUid], record) : []
-  wishBlock.hidden = !availability.needsWish
-  const box = $('#wish-options')
-  box.replaceChildren()
-  for (const option of options) {
-    const label = document.createElement('label')
-    if (option.takenBy && !option.isThisCourse) label.classList.add('taken')
-    const input = document.createElement('input')
-    input.type = 'radio'
-    input.name = 'wish'
-    input.value = String(option.no)
-    const text = document.createElement('span')
-    text.textContent = `第 ${option.no} 志願`
-    const extra = document.createElement('span')
-    extra.className = 'reserved'
-    const bits = []
-    if (option.isThisCourse) bits.push('目前是這門課')
-    else if (option.takenBy) bits.push(`已填 ${option.takenBy}`)
-    if (option.reserved) bits.push(`登記 ${option.reserved} 人`)
-    extra.textContent = bits.join('・')
-    label.append(input, text, extra)
-    box.append(label)
-  }
-  $('#confirm').showModal()
-}
-
-async function submit() {
-  const pending = state.pending
-  if (!pending) return
-  const { course, check } = pending
-  const { availability, record } = check
-  let wish = ''
-  if (availability.needsWish) {
-    const picked = document.querySelector('input[name="wish"]:checked')
-    if (!picked) {
-      const err = $('#confirm-error')
-      err.textContent = '請先選擇第幾志願。'
-      err.hidden = false
-      return
-    }
-    wish = picked.value
-  }
-  const btn = $('#btn-submit')
-  btn.disabled = true
-  btn.textContent = '送出中…'
-  try {
-    const reply = await ask({ type: 'register', params: registerParams(record, wish) })
-    if (!reply || !reply.ok) {
-      const err = $('#confirm-error')
-      err.textContent = replyProblem(reply)
-      err.hidden = false
-      return
-    }
-    const result = parseRegResult(reply.text)
-    $('#confirm').close()
-    const done = result.ok && availability.needsWish ? `已登記第 ${wish} 志願` : result.message
-    showMessage(`${course.cos_id} ${course.cos_cname}：${done}`, result.ok ? '' : 'error')
-    state.checks.delete(String(course.cos_id))
-    state.groups = {}
-    if (result.ok) await refreshRegistered()
-    render()
-  } finally {
-    btn.disabled = false
-    btn.textContent = '確認送出'
-  }
+async function openConfirm(course, check) {
+  const result = await dialog.open({
+    heading: `${course.cos_id} ${course.cos_cname}`,
+    detail: [course.lecturers, describeSlots(parseCosTime(course.cos_time))].filter(Boolean).join(' · '),
+    check,
+    groups: state.groups,
+  })
+  if (!result) return
+  showMessage(`${course.cos_id} ${course.cos_cname}：${result.message}`, result.ok ? '' : 'error')
+  state.checks.delete(String(course.cos_id))
+  state.groups = {}
+  if (result.ok) await refreshRegistered()
+  render()
 }
 
 // 送出後重讀正式選課清單，讓「已選上」立刻正確
@@ -573,8 +508,7 @@ function init() {
     state.checks.clear()
     await load()
   })
-  $('#btn-cancel').addEventListener('click', () => $('#confirm').close())
-  $('#btn-submit').addEventListener('click', submit)
+  dialog = createRegisterDialog()
   load().then(loadAuto).then(refreshRegStatus)
 }
 
