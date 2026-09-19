@@ -12,6 +12,9 @@ function card(hit, ctx) {
   li.dataset.id = course.id
   li.addEventListener('mouseenter', () => ctx.onHover(hit))
   li.addEventListener('mouseleave', () => ctx.onHover(null))
+  // 鍵盤聚焦卡片內的按鈕、連結時也要預覽；焦點還在卡片內移動（例如 Tab 到下一個按鈕）不算離開
+  li.addEventListener('focusin', () => ctx.onHover(hit))
+  li.addEventListener('focusout', (e) => { if (!li.contains(e.relatedTarget)) ctx.onHover(null) })
 
   const info = document.createElement('div')
   info.className = 'info'

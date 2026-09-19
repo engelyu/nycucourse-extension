@@ -24,10 +24,12 @@ export function createTimetable(container, { note, onOpen }) {
     b.dataset.item = entry.key
     b.dataset.kind = entry.kind
     b.style.setProperty('--kind', entry.color)
-    b.title = [entry.item.title, entry.room].filter(Boolean).join('・')
     if (entry.first) {
+      b.title = [entry.item.title, entry.room].filter(Boolean).join('・')
       b.append(el('span', 'mark', entry.mark), el('span', 'name', entry.item.title), el('span', 'room', entry.room))
     } else {
+      // 續行細條只有顏色，title 只放課名
+      b.title = entry.item.title
       b.setAttribute('aria-label', `${entry.item.title}（續）`)
     }
     b.addEventListener('click', () => onOpen(entry.item, b))
