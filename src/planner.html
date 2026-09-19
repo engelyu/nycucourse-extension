@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>選課規劃</title>
+  <link rel="stylesheet" href="planner.css">
+</head>
+<body>
+  <header class="page-head">
+    <h1>選課規劃</h1>
+    <p class="sub">找空堂課程：框選想上課的時段，找出落在這些時段的課。</p>
+  </header>
+  <main class="layout">
+    <section class="left">
+      <div class="toolbar">
+        <button id="fill-registered" type="button">帶入空堂：避開正式選課</button>
+        <button id="fill-all" type="button">帶入空堂：避開正式選課＋預排</button>
+        <button id="clear" type="button">全部清除</button>
+        <span id="count" class="muted"></span>
+      </div>
+      <p class="muted tip">按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。</p>
+      <div id="grid" class="slot-grid"></div>
+      <form id="filters" class="filters" autocomplete="off"></form>
+    </section>
+    <section class="right">
+      <p id="summary" class="summary"></p>
+      <p id="cos-hint" class="muted" hidden></p>
+      <div id="results"></div>
+    </section>
+  </main>
+  <script type="module" src="planner.js"></script>
+</body>
+</html>

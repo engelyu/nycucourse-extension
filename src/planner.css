@@ -1,0 +1,52 @@
+:root {
+  color-scheme: light dark;
+  --muted: #6b7280;
+  --line: rgba(127, 127, 127, .3);
+  --accent: #1f6feb;
+  --error: #c62828;
+  --ok: #15803d;
+  --sel: rgba(31, 111, 235, .22);
+}
+body { margin: 0; padding: 20px 24px; font: 14px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; background: Canvas; color: CanvasText; }
+h1 { margin: 0; font-size: 22px; }
+.sub, .muted { color: var(--muted); }
+.sub { margin: 2px 0 14px; }
+.layout { display: grid; grid-template-columns: minmax(440px, 580px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tip { font-size: 12px; margin: 6px 0 8px; }
+button { font: inherit; padding: 4px 10px; cursor: pointer; }
+
+/* 框選格子 */
+.slot-grid {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  font-size: 11px;
+}
+.slot-grid .head { border: none; background: none; color: var(--muted); padding: 2px 4px; cursor: pointer; border-radius: 4px; }
+.slot-grid .head:hover { color: CanvasText; background: rgba(127, 127, 127, .12); }
+.slot-grid .head.period { display: flex; gap: 5px; align-items: baseline; justify-content: flex-start; }
+.slot-grid .head.period small { font-size: 10px; }
+.slot-grid .cell {
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+  line-height: 22px;
+  color: var(--muted);
+  cursor: crosshair;
+}
+.slot-grid .cell.busy { background: repeating-linear-gradient(135deg, rgba(127, 127, 127, .16) 0 4px, transparent 4px 8px); }
+.slot-grid .cell.selected { background: var(--sel); border-color: var(--accent); color: CanvasText; }
+.slot-grid .cell.selected.busy { background: repeating-linear-gradient(135deg, rgba(31, 111, 235, .3) 0 4px, rgba(31, 111, 235, .15) 4px 8px); }
+.slot-grid .cell.drag-add { background: rgba(31, 111, 235, .45); border-color: var(--accent); }
+.slot-grid .cell.drag-remove { background: rgba(127, 127, 127, .3); border-style: dashed; }
+.slot-grid .cell.preview-in { box-shadow: inset 0 0 0 2px var(--accent); }
+.slot-grid .cell.preview-out { box-shadow: inset 0 0 0 2px var(--error); }

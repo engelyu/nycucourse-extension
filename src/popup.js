@@ -77,6 +77,7 @@ function renderTabs() {
 }
 
 async function init() {
+  document.getElementById('btn-planner').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('src/planner.html') }))
   document.getElementById('btn-schedule').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('src/schedule.html') }))
   document.getElementById('btn-register').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('src/register.html') }))
   renderTabs()
