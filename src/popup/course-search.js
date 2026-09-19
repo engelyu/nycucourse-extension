@@ -10,8 +10,9 @@ import { send, notify, refreshSysStatus, unavailableMessage, getDepTree, getCour
 const instances = new Set()
 
 // elements：{ q, list, summary, countsBtn }，countsBtn 可以是 null
-export function createCourseSearch({ q, list, summary, countsBtn = null }) {
-  const inst = { q, list, summary, countsBtn, render: () => renderSearch(inst) }
+// cosHint：不在選課網分頁時，在搜尋摘要提醒要切過去才能加入（課表 tab 用，加入預排 tab 另有狀態列）
+export function createCourseSearch({ q, list, summary, countsBtn = null, cosHint = false }) {
+  const inst = { q, list, summary, countsBtn, cosHint, render: () => renderSearch(inst) }
   instances.add(inst)
   q.addEventListener('input', () => renderSearch(inst))
   if (countsBtn) countsBtn.addEventListener('click', () => fetchCounts(inst))
@@ -120,9 +121,10 @@ function renderSearch(inst) {
     inst.countsBtn.disabled = !state.cosReady
     inst.countsBtn.title = state.cosReady ? '向選課網查目前的選課人數' : '要在選課網分頁才能查人數'
   }
-  showHint(summary, total === 0
+  const counted = total === 0
     ? '找不到符合的課程'
-    : total > items.length ? `共 ${total} 筆，顯示前 ${items.length} 筆` : `共 ${total} 筆`)
+    : total > items.length ? `共 ${total} 筆，顯示前 ${items.length} 筆` : `共 ${total} 筆`
+  showHint(summary, inst.cosHint && total > 0 && !state.cosReady ? `${counted}・切到選課網分頁才能加入預排` : counted)
   list.append(...items.map(courseRow))
 }
 

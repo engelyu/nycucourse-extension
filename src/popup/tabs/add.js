@@ -4,7 +4,7 @@ import { describeCrawl } from '../../lib/crawlState.js'
 import { sysStatusNotice } from '../../lib/regstatus.js'
 import { preregParams, defaultOption } from '../../lib/attribution.js'
 import { state, $, code, showHint, formatTime } from '../shared.js'
-import { send, detectTab, reloadCos, refreshSysStatus, unavailableMessage, onCosChange } from '../cos.js'
+import { send, connectOnce, reloadCos, refreshSysStatus, unavailableMessage, onCosChange } from '../cos.js'
 import { createCourseSearch, renderAllSearches, loadCounts, optionsFor } from '../course-search.js'
 
 const EMULATOR_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -275,7 +275,7 @@ export async function mount(root) {
   // 每秒重畫：更新經過時間、在沒有新事件時切換「網站較慢」與「中斷」提示
   setInterval(() => renderData(state.courseData, state.crawlState), 1000)
 
-  await Promise.all([detectTab(), loadData(), loadCounts()])
+  await Promise.all([connectOnce(), loadData(), loadCounts()])
   renderAllSearches()
 }
 

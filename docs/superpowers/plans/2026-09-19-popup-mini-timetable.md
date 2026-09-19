@@ -12,6 +12,8 @@
 
 ## Global Constraints
 
+- Update 2026-09-19 (user decision during Task 7): no automatic background refresh. The 課表 tab only reads 正式選課 from cos when the user clicks 「從選課網更新」 (next to 「更新於 …」); on failure it shows the reason and keeps the stored timetable.
+
 - Update 2026-09-19 (user decision after checkpoint 1): no 「上課中／下一堂」 text line and no next/current block highlight. The 課表 tab shows only the timetable (today column + now line kept). `describeNow` was removed. Task 7 drops `.now-line-text`, the `next`/`current` classes and their CSS. Task 8 drops the `nextLine`/`nextBlockHighlighted` checks.
 
 - The popup holds only small tools. Large features open a new Chrome tab, not a popup tab.

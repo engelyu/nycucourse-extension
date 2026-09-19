@@ -10,6 +10,7 @@
   :root { --warn: #f59e0b; }
 }
 body {
+  box-sizing: border-box;
   width: 420px;
   margin: 0;
   padding: 12px 14px 14px;
@@ -209,3 +210,84 @@ code { font-family: ui-monospace, Menlo, monospace; }
 .shell-actions { display: inline-flex; gap: 4px; padding-bottom: 6px; }
 .shell-actions button { font-size: 12px; padding: 2px 8px; }
 .panel[hidden] { display: none; }
+
+/* 課表 tab：迷你週課表 */
+.mini-week {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.mini-week[hidden] { display: none; }
+.mini-week .day-head, .mini-week .period {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  z-index: 1;
+}
+.mini-week .day-head.today { color: CanvasText; font-weight: 700; }
+.mini-week .today-col { background: rgba(31, 111, 235, .09); border-radius: 5px; }
+.mini-week .block {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 1px 4px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: rgba(127, 127, 127, .14);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mini-week .block:hover { border-color: var(--muted); }
+.mini-week .block .name,
+.mini-week .block .room {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini-week .block .room { color: var(--muted); font-size: 10px; }
+.mini-week .block.selected { box-shadow: inset 0 0 0 2px CanvasText; }
+.mini-week .block.wish { border-style: dashed; }
+.mini-week .block.conflict { border-color: var(--error); }
+.mini-week .now {
+  position: absolute;
+  left: 18px;
+  right: 0;
+  z-index: 2;
+  border-top: 2px solid var(--error);
+  pointer-events: none;
+}
+.detail {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.detail h2 { margin: 0 0 4px; font-size: 14px; }
+.detail p { margin: 0 0 6px; white-space: pre-line; color: var(--muted); }
+.detail-actions { display: flex; gap: 12px; align-items: center; }
+.detail-actions button { font-size: 12px; padding: 2px 8px; }
+.empty { font-size: 13px; color: var(--muted); }
+.empty button { font-size: 12px; margin-top: 4px; }
+.updated { margin: 4px 0 0; text-align: right; font-size: 11px; color: var(--muted); min-height: 1em; }
+.search.compact input { margin-top: 6px; }
+.updated { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.updated button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 11px;
+  cursor: pointer;
+}

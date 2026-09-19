@@ -13,6 +13,13 @@ export function notify() {
   for (const fn of listeners) fn()
 }
 
+// 連線只做一次：哪個 tab 先開就由它觸發，其他 tab 共用結果
+let connection = null
+export function connectOnce() {
+  if (!connection) connection = detectTab()
+  return connection
+}
+
 // 任何一個選課網分頁（不一定是目前的分頁）
 export async function findCosTab() {
   const tabs = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
