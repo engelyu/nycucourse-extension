@@ -129,3 +129,8 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
     padding-right: 6px;
   }
 }
+
+/* 格子的列：保持同一個 CSS grid；鍵盤焦點要看得到 */
+.slot-grid .row, .slot-grid .hwrap { display: contents; }
+.slot-grid .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.slot-grid .head:focus-visible { outline: 2px solid var(--accent); }
