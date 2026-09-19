@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NYCU 預排課程匯入",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "搜尋陽明交大課程，一鍵加入預排或正式選課，並提供我的課表與每日自動登記。",
   "icons": {
     "16": "icons/icon16.png",
