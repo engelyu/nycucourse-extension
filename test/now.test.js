@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { courseToItem, manualItem, buildWeek, mergeBlocks, slotsFromTimeRange } from '../src/lib/schedule.js'
-import { locateNow, describeNow } from '../src/lib/now.js'
+import { locateNow } from '../src/lib/now.js'
 
 // 2026-09-21 是週一
 const at = (day, hhmm) => {
@@ -64,21 +64,10 @@ test('同一天稍晚的課：週一 14:30 之後的下一堂是週二', () => {
 test('這週完全沒課', () => {
   const r = locateNow(mergeBlocks(buildWeek([])), at(3, '10:00'))
   assert.deepEqual([r.current, r.next, r.nowLine], [null, null, null])
-  assert.deepEqual(describeNow(r), ['這週沒有課'])
 })
 
 test('自訂時間的行程也能計算', () => {
   const item = manualItem({ id: 'x', title: '社團', slots: slotsFromTimeRange(2, '18:40', '20:10', '活動中心') })
   const r = locateNow(mergeBlocks(buildWeek([item])), at(2, '18:45'))
   assert.equal(r.current.item.title, '社團')
-})
-
-test('describeNow 上課中與下一堂的文字', () => {
-  assert.deepEqual(describeNow(locateNow(week, at(3, '08:30'))), [
-    '上課中：微積分・SA101，09:50 下課',
-    '下一堂 10:10（1 小時 40 分鐘後）・線性代數・SC201',
-  ])
-  assert.deepEqual(describeNow(locateNow(week, at(3, '10:05'))), ['下一堂 10:10（5 分鐘後）・線性代數・SC201'])
-  assert.deepEqual(describeNow(locateNow(week, at(1, '14:30'))), ['下一堂 明天 10:10・線性代數・SC201'])
-  assert.deepEqual(describeNow(locateNow(week, at(3, '15:00'))), ['下一堂 週一 08:00・微積分・SA101'])
 })

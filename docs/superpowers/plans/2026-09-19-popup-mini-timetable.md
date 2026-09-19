@@ -12,6 +12,8 @@
 
 ## Global Constraints
 
+- Update 2026-09-19 (user decision after checkpoint 1): no 「上課中／下一堂」 text line and no next/current block highlight. The 課表 tab shows only the timetable (today column + now line kept). `describeNow` was removed. Task 7 drops `.now-line-text`, the `next`/`current` classes and their CSS. Task 8 drops the `nextLine`/`nextBlockHighlighted` checks.
+
 - The popup holds only small tools. Large features open a new Chrome tab, not a popup tab.
 - Tab order is 1. `add`（加入預排） 2. `schedule`（課表）. The last used tab is remembered in `chrome.storage.local` key `popupTab`. Unknown or unreadable values fall back to the first tab.
 - The 課表 tab shows 正式選課 (`schedule.sources.registered`), 自訂行程 and overrides. It does not show 預排.
