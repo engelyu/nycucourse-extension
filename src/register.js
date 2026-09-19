@@ -3,6 +3,7 @@ import { parseCosTime, describeSlots } from './lib/periods.js'
 import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
 import { parseRegStatus } from './lib/regstatus.js'
+import { withSyncedSources } from './lib/schedule.js'
 import { describeAttribution, findAttributionOptions, preregParams, attributionKey, courseDepUids } from './lib/attribution.js'
 
 const $ = (sel) => document.querySelector(sel)
@@ -437,23 +438,7 @@ async function refreshRegistered() {
   const reply = await ask({ type: 'courses' })
   if (!reply || !reply.ok) return
   const { schedule } = await chrome.storage.local.get('schedule')
-  const now = Date.now()
-  const semesterOf = (list) => {
-    const c = (list || [])[0]
-    return c && c.acy ? `${c.acy}${c.sem}` : ''
-  }
-  const next = {
-    sources: {},
-    manual: [],
-    overrides: {},
-    ...(schedule || {}),
-  }
-  next.sources = {
-    ...next.sources,
-    registered: { semester: semesterOf(reply.registered), updatedAt: now, courses: reply.registered || [] },
-    preregist: { semester: semesterOf(reply.preregist), updatedAt: now, courses: reply.preregist || [] },
-  }
-  await chrome.storage.local.set({ schedule: next })
+  await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
   state.registered = new Map((reply.registered || []).map((c) => [String(c.cos_id), c]))
   state.courses = reply.preregist || []
 }

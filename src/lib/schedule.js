@@ -140,3 +140,40 @@ export function buildWeek(items) {
   }
   return { days, rows, dayNames: DAY_NAMES }
 }
+
+// 課表要顯示的項目：同步進來的課（依 sources 的順序，同一課號前面的來源優先）＋自訂行程，
+// 再套用使用者的覆寫。所有來源都從這裡匯入；之後加外部行事曆也是在這裡多一種來源。
+export function scheduleItems(schedule, sources) {
+  const s = schedule || {}
+  const seen = new Set()
+  const items = []
+  for (const name of sources || []) {
+    const src = (s.sources || {})[name]
+    for (const course of (src && src.courses) || []) {
+      const item = courseToItem(course, { source: name, semester: src.semester })
+      if (seen.has(item.cosId)) continue
+      seen.add(item.cosId)
+      items.push(item)
+    }
+  }
+  const manual = (s.manual || []).map((m) => ({ ...m }))
+  return applyOverrides([...items, ...manual], s.overrides || {})
+}
+
+// 把選課網同步回來的正式選課與預排寫進 schedule（回傳新物件）
+export function withSyncedSources(schedule, reply, nowMs) {
+  const semesterOf = (list) => {
+    const c = (list || [])[0]
+    return c && c.acy ? `${c.acy}${c.sem}` : ''
+  }
+  const base = { sources: {}, manual: [], overrides: {}, ...(schedule || {}) }
+  const r = reply || {}
+  return {
+    ...base,
+    sources: {
+      ...(base.sources || {}),
+      registered: { semester: semesterOf(r.registered), updatedAt: nowMs, courses: r.registered || [] },
+      preregist: { semester: semesterOf(r.preregist), updatedAt: nowMs, courses: r.preregist || [] },
+    },
+  }
+}

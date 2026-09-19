@@ -1,4 +1,4 @@
-import { courseToItem, manualItem, slotsFromTimeRange, slotsFromPeriodRange, applyOverrides, itemUrl, buildWeek } from './lib/schedule.js'
+import { manualItem, slotsFromTimeRange, slotsFromPeriodRange, itemUrl, buildWeek, scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { PERIODS, DAY_NAMES, describeSlots } from './lib/periods.js'
 
 const COS_URL = 'https://cos.nycu.edu.tw/#/emulator'
@@ -35,26 +35,9 @@ async function load() {
 
 // ---------- 課表 ----------
 
-function syncedItems() {
-  const sources = state.schedule.sources || {}
-  const wanted = state.source === 'all' ? ['registered', 'preregist'] : [state.source]
-  const seen = new Set()
-  const items = []
-  for (const name of wanted) {
-    const src = sources[name]
-    for (const course of (src && src.courses) || []) {
-      const item = courseToItem(course, { source: name, semester: src.semester })
-      if (seen.has(item.cosId)) continue // 「全部」時同一門課只留一筆，正式選課優先
-      seen.add(item.cosId)
-      items.push(item)
-    }
-  }
-  return items
-}
-
 function currentItems() {
-  const manual = (state.schedule.manual || []).map((m) => ({ ...m }))
-  return applyOverrides([...syncedItems(), ...manual], state.schedule.overrides || {})
+  const wanted = state.source === 'all' ? ['registered', 'preregist'] : [state.source]
+  return scheduleItems(state.schedule, wanted)
 }
 
 function itemElement(item) {
@@ -157,7 +140,9 @@ function renderLists() {
   $('#override-section').hidden = overrides.length === 0
   const olist = $('#override-list')
   olist.replaceChildren()
-  const titleOf = (cosId) => (syncedItems().find((i) => i.cosId === cosId) || {}).title || cosId
+  // 被隱藏的課也要查得到課名，所以不套覆寫
+  const known = scheduleItems({ ...state.schedule, overrides: {} }, ['registered', 'preregist'])
+  const titleOf = (cosId) => (known.find((i) => i.cosId === cosId) || {}).title || cosId
   for (const [cosId, o] of overrides) {
     const li = document.createElement('li')
     const bits = [o.hidden ? '已隱藏' : '', o.url ? '自訂連結' : '', o.color ? '自訂顏色' : ''].filter(Boolean)
@@ -352,15 +337,8 @@ async function sync() {
         'error',
       )
     }
-    const now = Date.now()
-    const semesterOf = (list) => {
-      const c = (list || [])[0]
-      return c && c.acy ? `${c.acy}${c.sem}` : ''
-    }
-    const sources = { ...(state.schedule.sources || {}) }
-    sources.registered = { semester: semesterOf(reply.registered), updatedAt: now, courses: reply.registered || [] }
-    sources.preregist = { semester: semesterOf(reply.preregist), updatedAt: now, courses: reply.preregist || [] }
-    state.schedule = { ...state.schedule, sources }
+    state.schedule = withSyncedSources(state.schedule, reply, Date.now())
+    const sources = state.schedule.sources
     await save()
     render()
     showMessage(`同步完成：正式 ${sources.registered.courses.length} 門、預排 ${sources.preregist.courses.length} 門`)

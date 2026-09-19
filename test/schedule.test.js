@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { courseToItem, manualItem, slotsFromTimeRange, applyOverrides, itemUrl, buildWeek } from '../src/lib/schedule.js'
+import { courseToItem, manualItem, slotsFromTimeRange, applyOverrides, itemUrl, buildWeek, scheduleItems, withSyncedSources } from '../src/lib/schedule.js'
 
 const course = {
   cos_id: '516700',
@@ -117,4 +117,32 @@ test('自訂行程存檔用的純資料格式', async () => {
   assert.equal(item.color, '#0a0')
   assert.equal(item.slots[0].room, '體育館')
   assert.deepEqual(JSON.parse(JSON.stringify(item)), item)
+})
+
+test('scheduleItems 合併來源、前面的來源優先、加上自訂行程並套用覆寫', () => {
+  const schedule = {
+    sources: {
+      registered: { semester: '1151', courses: [{ cos_id: '1', cos_cname: '線性代數', cos_time: 'W34-SC201[GF]', sFlag: 'F' }] },
+      preregist: { semester: '1151', courses: [{ cos_id: '1', cos_cname: '線性代數', cos_time: 'W34-SC201[GF]' }, { cos_id: '2', cos_cname: '計概', cos_time: 'R56-EC115[GF]' }] },
+    },
+    manual: [manualItem({ id: 'm1', title: '社團', slots: [{ day: 2, period: 'a' }] })],
+    overrides: { 1: { url: 'https://e3.example/1' } },
+  }
+  const reg = scheduleItems(schedule, ['registered'])
+  assert.deepEqual(reg.map((i) => i.key), ['registered:1', 'manual:m1'])
+  assert.equal(reg[0].url, 'https://e3.example/1')
+  const all = scheduleItems(schedule, ['registered', 'preregist'])
+  assert.deepEqual(all.map((i) => i.key), ['registered:1', 'preregist:2', 'manual:m1'])
+  assert.deepEqual(scheduleItems(undefined, ['registered']), [])
+})
+
+test('withSyncedSources 寫入正式選課與預排並記下時間與學期', () => {
+  const before = { sources: { other: { courses: [] } }, manual: [{ key: 'manual:x' }], overrides: { 1: { color: '#fff' } } }
+  const next = withSyncedSources(before, { registered: [{ cos_id: '1', acy: '115', sem: '1' }], preregist: [] }, 1000)
+  assert.deepEqual(next.sources.registered, { semester: '1151', updatedAt: 1000, courses: [{ cos_id: '1', acy: '115', sem: '1' }] })
+  assert.deepEqual(next.sources.preregist, { semester: '', updatedAt: 1000, courses: [] })
+  assert.deepEqual(next.sources.other, { courses: [] })
+  assert.deepEqual(next.manual, before.manual)
+  assert.notEqual(next, before)
+  assert.deepEqual(withSyncedSources(undefined, {}, 5).sources.registered, { semester: '', updatedAt: 5, courses: [] })
 })
