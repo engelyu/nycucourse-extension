@@ -10,6 +10,7 @@ import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
 import { createFilterPanel } from './planner/filter-panel.js'
+import { createTimetable } from './planner/timetable.js'
 
 const $ = (sel) => document.querySelector(sel)
 const VALID = new Set(ALL_SLOTS)
@@ -25,6 +26,7 @@ const state = {
 }
 const addState = new Map() // 課號 -> { status: 'pending'|'choose'|'added'|'exists'|'error', ... }
 let grid = null
+let timetable = null
 let deptPicker = null
 let depTree = null
 let panel = null
@@ -234,7 +236,10 @@ function renderResults() {
     semester: state.courseData.semester,
     statuses: courseStatuses(state.schedule),
     addState,
-    onHover: (hit) => grid.preview(hit ? hit.keys.filter((k) => state.selection.has(k)) : [], hit ? hit.outside : []),
+    onHover: (hit) => {
+      grid.preview(hit ? hit.keys.filter((k) => state.selection.has(k)) : [], hit ? hit.outside : [])
+      timetable.preview(hit ? courseSlots(hit.course).keys : [])
+    },
     onAdd: addCourse,
     onQuery: queryCourse,
     onRegister: registerCourse,
@@ -423,8 +428,12 @@ function renderLegend(legend) {
 
 // ---------- 初始化 ----------
 
+// 詳情小卡：Task 5 才會換成真的
+function openDetail() {}
+
 function render() {
   grid.render(state.selection, occupiedKinds(state.schedule))
+  timetable.render(scheduleItems(state.schedule, ['registered', 'preregist']))
   $('#status-at').textContent = statusMessage || statusAtText()
   $('#count').textContent = `已選 ${state.selection.size} 格`
   $('#undo').disabled = !history.length
@@ -437,6 +446,7 @@ async function init() {
   if (stored.schedule) state.schedule = stored.schedule
   state.courseData = stored.courseData || null
   grid = createSlotGrid($('#grid'), { onChange: setSelection })
+  timetable = createTimetable($('#timetable'), { note: $('#hidden-note'), onOpen: openDetail })
   dialog = createRegisterDialog()
   panel = createFilterPanel({
     panel: $('#filter-panel'),
