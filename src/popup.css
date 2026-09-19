@@ -10,21 +10,11 @@
   :root { --warn: #f59e0b; }
 }
 body {
-  width: 380px;
+  width: 420px;
   margin: 0;
   padding: 12px 14px 14px;
   font: 14px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
 }
-h1 { font-size: 16px; margin: 0; }
-.app-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.app-bar button { font-size: 12px; }
-.app-bar-actions { display: inline-flex; gap: 6px; }
 h2 { font-size: 13px; margin: 10px 0 4px; }
 label { display: block; margin: 8px 0 4px; }
 button {
@@ -187,3 +177,35 @@ code { font-family: ui-monospace, Menlo, monospace; }
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* 外殼：tab 列 */
+.shell {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -12px -14px 10px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(127, 127, 127, .08);
+}
+.tabs { display: flex; gap: 2px; }
+.tabs [role="tab"] {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  padding: 5px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.tabs [role="tab"][aria-selected="true"] {
+  background: Canvas;
+  color: CanvasText;
+  border-color: var(--line);
+  margin-bottom: -1px;
+  font-weight: 600;
+}
+.shell-actions { display: inline-flex; gap: 4px; padding-bottom: 6px; }
+.shell-actions button { font-size: 12px; padding: 2px 8px; }
+.panel[hidden] { display: none; }

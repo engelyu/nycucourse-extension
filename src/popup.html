@@ -6,62 +6,82 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <header class="app-bar">
-    <h1>NYCU 預排課程匯入</h1>
-    <span class="app-bar-actions">
-      <button id="btn-register" type="button">選課</button>
-      <button id="btn-schedule" type="button">我的課表</button>
+  <header class="shell">
+    <nav id="tabs" class="tabs" role="tablist" aria-label="功能"></nav>
+    <span class="shell-actions">
+      <button id="btn-schedule" type="button" title="開啟完整週課表">週課表 ↗</button>
+      <button id="btn-register" type="button" title="開啟選課頁">選課 ↗</button>
     </span>
   </header>
+  <main id="panels"></main>
 
-  <section class="data-bar">
-    <span id="data-status">尚未下載課程資料</span>
-    <button id="btn-crawl" type="button">更新課程資料</button>
-  </section>
-  <section id="crawl-progress" class="crawl-progress" role="status" aria-live="polite" hidden>
-    <div class="crawl-row">
-      <span id="crawl-title" class="crawl-title"></span>
-      <span id="crawl-elapsed" class="crawl-elapsed"></span>
-    </div>
-    <div id="crawl-track" class="crawl-track"><div id="crawl-bar" class="crawl-bar"></div></div>
-    <div class="crawl-row">
-      <span id="crawl-detail"></span>
-      <span id="crawl-percent"></span>
-    </div>
-    <p id="crawl-hint" class="crawl-hint"></p>
-  </section>
-  <p id="crawl-error" class="hint error" hidden></p>
+  <!-- 每個 tab 一個 template，id 是 tpl-<tab id>；外殼第一次切到該 tab 時複製進去 -->
+  <template id="tpl-add">
+    <section class="data-bar">
+      <span id="data-status">尚未下載課程資料</span>
+      <button id="btn-crawl" type="button">更新課程資料</button>
+    </section>
+    <section id="crawl-progress" class="crawl-progress" role="status" aria-live="polite" hidden>
+      <div class="crawl-row">
+        <span id="crawl-title" class="crawl-title"></span>
+        <span id="crawl-elapsed" class="crawl-elapsed"></span>
+      </div>
+      <div id="crawl-track" class="crawl-track"><div id="crawl-bar" class="crawl-bar"></div></div>
+      <div class="crawl-row">
+        <span id="crawl-detail"></span>
+        <span id="crawl-percent"></span>
+      </div>
+      <p id="crawl-hint" class="crawl-hint"></p>
+    </section>
+    <p id="crawl-error" class="hint error" hidden></p>
 
-  <section id="tab-bar" class="tab-bar" hidden>
-    <span id="tab-status"></span>
-    <button id="btn-open" type="button" hidden>開啟選課網</button>
-    <button id="btn-reload" type="button" hidden>重新整理選課網</button>
-  </section>
-  <p id="sys-status" class="hint warn" role="status" hidden></p>
-  <p id="semester-warning" class="hint warn" role="alert" hidden></p>
+    <section id="tab-bar" class="tab-bar" hidden>
+      <span id="tab-status"></span>
+      <button id="btn-open" type="button" hidden>開啟選課網</button>
+      <button id="btn-reload" type="button" hidden>重新整理選課網</button>
+    </section>
+    <p id="sys-status" class="hint warn" role="status" hidden></p>
+    <p id="semester-warning" class="hint warn" role="alert" hidden></p>
 
-  <section class="search">
-    <input id="q" type="search" placeholder="課名、老師或課號" autocomplete="off" disabled>
-    <div class="search-bar">
-      <p id="search-summary" class="hint" hidden></p>
-      <button id="btn-counts" type="button" hidden>查人數</button>
-    </div>
-    <ul id="search-results" class="results"></ul>
-  </section>
+    <section class="search">
+      <input id="q" type="search" placeholder="課名、老師或課號" autocomplete="off" disabled>
+      <div class="search-bar">
+        <p id="search-summary" class="hint" hidden></p>
+        <button id="btn-counts" type="button" hidden>查人數</button>
+      </div>
+      <ul id="search-results" class="results"></ul>
+    </section>
 
-  <details id="bulk">
-    <summary>貼上課號批次加入</summary>
-    <label for="ids">課號（用逗號、空白或換行分隔）</label>
-    <textarea id="ids" rows="4" placeholder="例如：516702, 516703&#10;也接受 1151_516702"></textarea>
-    <button id="btn-import" type="button">加入預排</button>
-    <p id="hint" class="hint" hidden></p>
-    <div id="results" hidden>
-      <div class="group" id="group-added" hidden><h2>成功加入</h2><ul></ul></div>
-      <div class="group" id="group-exists" hidden><h2>原本就在預排</h2><ul></ul></div>
-      <div class="group group-error" id="group-error" hidden><h2>失敗</h2><ul></ul></div>
-      <div class="group" id="group-invalid" hidden><h2>看不懂的輸入</h2><ul></ul></div>
-    </div>
-  </details>
+    <details id="bulk">
+      <summary>貼上課號批次加入</summary>
+      <label for="ids">課號（用逗號、空白或換行分隔）</label>
+      <textarea id="ids" rows="4" placeholder="例如：516702, 516703&#10;也接受 1151_516702"></textarea>
+      <button id="btn-import" type="button">加入預排</button>
+      <p id="hint" class="hint" hidden></p>
+      <div id="results" hidden>
+        <div class="group" id="group-added" hidden><h2>成功加入</h2><ul></ul></div>
+        <div class="group" id="group-exists" hidden><h2>原本就在預排</h2><ul></ul></div>
+        <div class="group group-error" id="group-error" hidden><h2>失敗</h2><ul></ul></div>
+        <div class="group" id="group-invalid" hidden><h2>看不懂的輸入</h2><ul></ul></div>
+      </div>
+    </details>
+  </template>
+
+  <template id="tpl-schedule">
+    <div class="mini-week" role="grid" aria-label="本週課表"></div>
+    <div class="detail" hidden></div>
+    <p class="empty" hidden>
+      還沒有正式選課。
+      <button type="button" data-action="open-schedule">看預排課表 ↗</button>
+      <button type="button" data-action="sync">從選課網同步</button>
+    </p>
+    <p class="updated"></p>
+    <section class="search compact">
+      <input class="q" type="search" placeholder="找課：課名、老師或課號" autocomplete="off">
+      <p class="search-summary hint" hidden></p>
+      <ul class="search-results results"></ul>
+    </section>
+  </template>
 
   <script type="module" src="popup.js"></script>
 </body>

@@ -252,7 +252,7 @@ async function onBulkImport() {
   btn.disabled = false
 }
 
-export async function mount() {
+export async function mount(root) {
   $('#btn-open').addEventListener('click', () => chrome.tabs.create({ url: EMULATOR_URL }))
   $('#btn-reload').addEventListener('click', () => reloadCos())
   $('#btn-crawl').addEventListener('click', startCrawl)
