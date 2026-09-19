@@ -7,7 +7,7 @@ import { describeAttribution } from './attribution.js'
 // Okabe-Ito 配色：常見色弱（紅綠、藍黃）也分得出來；另外搭配文字標記，不只靠顏色
 export const KIND_COLORS = { registered: '#009E73', wish: '#E69F00', preregist: '#0072B2', manual: '#CC79A7' }
 const CIRCLED = ['', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨']
-function markOf(kind, item) {
+export function itemMark(kind, item) {
   if (kind === 'registered') return '✓'
   if (kind === 'wish') return CIRCLED[item.wishNo] || '登'
   if (kind === 'preregist') return '預'
@@ -33,7 +33,7 @@ export function courseStatuses(schedule) {
   return out
 }
 
-function kindOf(item) {
+export function itemKind(item) {
   if (item.source === 'manual') return 'manual'
   if (item.source === 'registered') return item.regState === 'wish' ? 'wish' : 'registered'
   return 'preregist'
@@ -43,12 +43,12 @@ function kindOf(item) {
 export function occupiedKinds(schedule) {
   const out = new Map()
   for (const item of scheduleItems(schedule, ['registered', 'preregist'])) {
-    const kind = kindOf(item)
+    const kind = itemKind(item)
     const color = kind === 'manual' ? item.color || KIND_COLORS.manual : KIND_COLORS[kind]
     for (const s of item.slots || []) {
       const key = `${s.day}-${s.period}`
       const cur = out.get(key)
-      const mark = markOf(kind, item)
+      const mark = itemMark(kind, item)
       if (!cur) {
         out.set(key, { kind, color, mark, titles: [item.title] })
         continue
