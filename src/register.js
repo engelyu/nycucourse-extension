@@ -4,6 +4,7 @@ import { formatSeats } from './lib/seats.js'
 import { timeWarning } from './lib/autoreg.js'
 import { parseRegStatus } from './lib/regstatus.js'
 import { withSyncedSources } from './lib/schedule.js'
+import { askCos as ask, cosProblem as replyProblem } from './cos-tab.js'
 import { describeAttribution, findAttributionOptions, preregParams, attributionKey, courseDepUids } from './lib/attribution.js'
 
 const $ = (sel) => document.querySelector(sel)
@@ -46,29 +47,6 @@ function showMessage(text, kind = '') {
   el.hidden = !text
 }
 
-async function findCosTab() {
-  const tabs = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
-  return tabs[0] || null
-}
-
-async function ask(message) {
-  const tab = await findCosTab()
-  if (!tab) return { ok: false, reason: 'no_tab' }
-  try {
-    return await chrome.tabs.sendMessage(tab.id, message)
-  } catch {
-    return { ok: false, reason: 'no_content_script' }
-  }
-}
-
-function replyProblem(reply) {
-  if (!reply) return '選課網沒有回應'
-  if (reply.reason === 'no_tab') return '找不到選課網分頁，請先開啟並登入選課網。'
-  if (reply.reason === 'no_content_script') return '選課網分頁沒有回應，請重新整理該分頁。'
-  if (reply.reason === 'not_logged_in') return '請先登入選課網。'
-  if (reply.reason === 'no_menu') return '缺少這門課的查詢資料，請在 popup 按「更新課程資料」後再試。'
-  return reply.detail || '選課網沒有回應'
-}
 
 async function load() {
   const { schedule, courseData } = await chrome.storage.local.get(['schedule', 'courseData'])
