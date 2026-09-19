@@ -139,6 +139,7 @@ function render() {
   const empty = week.blocks.length === 0
   el('.empty').hidden = !empty
   el('.mini-week').hidden = empty
+  el('.updated').hidden = empty // 空狀態自己有同步按鈕
   if (selectedKey && !week.blocks.some((b) => b.key === selectedKey)) selectedKey = null
   if (!empty) renderWeek(week, locateNow(week, new Date()))
   renderDetail(week)

@@ -291,3 +291,4 @@ code { font-family: ui-monospace, Menlo, monospace; }
   font-size: 11px;
   cursor: pointer;
 }
+.updated[hidden] { display: none; }
