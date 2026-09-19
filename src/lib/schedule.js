@@ -168,14 +168,14 @@ export function withSyncedSources(schedule, reply, nowMs) {
   }
   const base = { sources: {}, manual: [], overrides: {}, ...(schedule || {}) }
   const r = reply || {}
-  return {
-    ...base,
-    sources: {
-      ...(base.sources || {}),
-      registered: { semester: semesterOf(r.registered), updatedAt: nowMs, courses: r.registered || [] },
-      preregist: { semester: semesterOf(r.preregist), updatedAt: nowMs, courses: r.preregist || [] },
-    },
+  const sources = { ...(base.sources || {}) }
+  // 讀取失敗的清單是 null：保留原本的資料，不要用空清單蓋掉
+  for (const name of ['registered', 'preregist']) {
+    if (r[name] === null) continue
+    const courses = r[name] || []
+    sources[name] = { semester: semesterOf(courses), updatedAt: nowMs, courses }
   }
+  return { ...base, sources }
 }
 
 const minutesOf = (hhmm) => {

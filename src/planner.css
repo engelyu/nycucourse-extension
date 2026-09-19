@@ -43,9 +43,9 @@ button { font: inherit; padding: 4px 10px; cursor: pointer; }
   color: var(--muted);
   cursor: crosshair;
 }
-.slot-grid .cell.busy { background: repeating-linear-gradient(135deg, rgba(127, 127, 127, .16) 0 4px, transparent 4px 8px); }
 .slot-grid .cell.selected { background: var(--sel); border-color: var(--accent); color: CanvasText; }
-.slot-grid .cell.selected.busy { background: repeating-linear-gradient(135deg, rgba(31, 111, 235, .3) 0 4px, rgba(31, 111, 235, .15) 4px 8px); }
+.slot-grid .cell.busy { border-left: 4px solid var(--kind); background: color-mix(in srgb, var(--kind) 16%, transparent); color: CanvasText; }
+.slot-grid .cell.selected.busy { background: color-mix(in srgb, var(--kind) 16%, var(--sel)); }
 .slot-grid .cell.drag-add { background: rgba(31, 111, 235, .45); border-color: var(--accent); }
 .slot-grid .cell.drag-remove { background: rgba(127, 127, 127, .3); border-style: dashed; }
 .slot-grid .cell.preview-in { box-shadow: inset 0 0 0 2px var(--accent); }
@@ -91,3 +91,12 @@ button { font: inherit; padding: 4px 10px; cursor: pointer; }
 .card .error { color: var(--error); font-size: 12px; }
 .card .choices { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 12px; color: var(--muted); }
 button.link { background: none; border: none; padding: 0 2px; color: var(--muted); text-decoration: underline; font-size: 12px; }
+
+/* 狀態 */
+.status-bar { display: flex; gap: 10px; align-items: center; margin: -6px 0 14px; font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.card .badge { display: inline-block; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; margin-left: 8px; color: #fff; vertical-align: 1px; }
+.card .badge[data-state="registered"] { background: #16a34a; }
+.card .badge[data-state="wish"] { background: #ea580c; }
+.card .badge[data-state="preregist"] { background: #64748b; }

@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <title>選課規劃</title>
   <link rel="stylesheet" href="planner.css">
+  <link rel="stylesheet" href="reg-dialog.css">
 </head>
 <body>
   <header class="page-head">
     <h1>選課規劃</h1>
     <p class="sub">找空堂課程：框選想上課的時段，找出落在這些時段的課。</p>
+    <div class="status-bar"><button id="refresh-status" type="button">從選課網更新狀態</button><span id="status-at" class="muted"></span></div>
   </header>
   <main class="layout">
     <section class="left">
@@ -19,6 +21,7 @@
         <span id="count" class="muted"></span>
       </div>
       <p class="muted tip">按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。</p>
+      <div id="legend" class="legend"></div>
       <div id="grid" class="slot-grid"></div>
       <form id="filters" class="filters" autocomplete="off"></form>
     </section>

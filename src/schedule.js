@@ -341,7 +341,9 @@ async function sync() {
     const sources = state.schedule.sources
     await save()
     render()
-    showMessage(`同步完成：正式 ${sources.registered.courses.length} 門、預排 ${sources.preregist.courses.length} 門`)
+    const n = (src) => ((src && src.courses) || []).length
+    const failed = [reply.registered === null ? '正式選課' : '', reply.preregist === null ? '預排' : ''].filter(Boolean)
+    showMessage(`同步完成：正式 ${n(sources.registered)} 門、預排 ${n(sources.preregist)} 門${failed.length ? `（${failed.join('、')}讀取失敗，保留原本的資料）` : ''}`)
   } finally {
     btn.disabled = false
   }

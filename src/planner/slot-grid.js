@@ -78,16 +78,18 @@ export function createSlotGrid(container, { onChange }) {
   container.addEventListener('pointercancel', () => finish(false))
 
   return {
-    // occupied：時段 -> 佔用它的課名（正式選課、預排、自訂行程）
+    // occupied：時段 -> { kind, color, titles }（正式選上、登記中、在預排、私人行程）
     render(nextSelection, occupied = new Map()) {
       selection = new Set(nextSelection)
       for (const cell of container.querySelectorAll('.cell')) {
         const key = cell.dataset.key
         cell.classList.toggle('selected', selection.has(key))
-        const busy = occupied.get(key) || ''
-        cell.classList.toggle('busy', Boolean(busy))
-        cell.textContent = busy
-        cell.title = busy
+        const info = occupied.get(key)
+        cell.classList.toggle('busy', Boolean(info))
+        cell.dataset.kind = info ? info.kind : ''
+        cell.style.setProperty('--kind', info ? info.color : 'transparent')
+        cell.textContent = info ? info.titles[0] : ''
+        cell.title = info ? info.titles.join('、') : ''
       }
     },
     preview(inKeys = [], outKeys = []) {

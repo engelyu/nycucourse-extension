@@ -186,3 +186,11 @@ test('mergeBlocks 同一門課不同節在不同教室時合併教室', () => {
 test('mergeBlocks 沒有行程時回空區塊', () => {
   assert.deepEqual(mergeBlocks(buildWeek([])).blocks, [])
 })
+
+test('withSyncedSources 某份清單讀取失敗（null）時保留原本的資料', () => {
+  const before = { sources: { registered: { semester: '1151', updatedAt: 1, courses: [{ cos_id: '1' }] }, preregist: { semester: '1151', updatedAt: 1, courses: [] } } }
+  const next = withSyncedSources(before, { registered: null, preregist: [{ cos_id: '2', acy: '115', sem: '1' }] }, 9)
+  assert.deepEqual(next.sources.registered, before.sources.registered)
+  assert.deepEqual(next.sources.preregist.courses, [{ cos_id: '2', acy: '115', sem: '1' }])
+  assert.equal(next.sources.preregist.updatedAt, 9)
+})

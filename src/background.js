@@ -141,6 +141,8 @@ async function runAutoRegister(trigger = 'alarm') {
   if (!lists || !lists.ok) {
     return finish([], lists && lists.reason === 'not_logged_in' ? '選課網登入已過期，請重新登入' : '無法讀取選課網資料')
   }
+  // 讀不到正式選課就不送：否則可能把已經登記的課當成沒登記再送一次
+  if (lists.registered === null) return finish([], '無法讀取正式選課，這次不送出')
   const registered = Object.fromEntries((lists.registered || []).map((c) => [String(c.cos_id), c]))
   const preregist = Object.fromEntries((lists.preregist || []).map((c) => [String(c.cos_id), c]))
   const plan = buildPlan(cfg.items, registered)

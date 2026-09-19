@@ -1,5 +1,6 @@
 // 選課規劃頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
-import { scheduleItems } from './lib/schedule.js'
+import { scheduleItems, withSyncedSources } from './lib/schedule.js'
+import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
 import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts } from './lib/freeslots.js'
 import { findAttributionOptions, needsChoice, preregParams, courseDepUids } from './lib/attribution.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
@@ -10,7 +11,7 @@ import { renderResults as renderResultList } from './planner/results.js'
 const $ = (sel) => document.querySelector(sel)
 const VALID = new Set(ALL_SLOTS)
 const CODE_CATEGORIES = new Set(['核心・基本素養', '核心・領域課程', '語言與溝通'])
-const DEFAULT_FILTERS = { mode: 'inside', sort: 'fit', campuses: [], categories: [], deps: [], creditMin: '', creditMax: '', keyword: '', excludeRegistered: false, excludePreregist: false }
+const DEFAULT_FILTERS = { mode: 'inside', sort: 'fit', campuses: [], categories: [], deps: [], keyword: '' }
 
 const state = {
   selection: new Set(),
@@ -40,18 +41,6 @@ function restore(saved) {
 }
 
 // ---------- 時段 ----------
-
-// 格子上顯示「這格已經有什麼課」：正式選課、預排、自訂行程
-function occupiedLabels() {
-  const labels = new Map()
-  for (const item of scheduleItems(state.schedule, ['registered', 'preregist'])) {
-    for (const s of item.slots || []) {
-      const key = `${s.day}-${s.period}`
-      labels.set(key, labels.has(key) ? `${labels.get(key)}、${item.title}` : item.title)
-    }
-  }
-  return labels
-}
 
 function setSelection(next) {
   state.selection = new Set([...next].filter((k) => VALID.has(k)))
@@ -119,21 +108,8 @@ function buildFilters() {
   })
   deptPicker.update(depCounts(courses()), f.deps)
 
-  form.append(
-    fieldset(
-      '學分',
-      input('credit-min', { type: 'number', min: 0, step: 1, value: f.creditMin, placeholder: '不限' }),
-      ' 到 ',
-      input('credit-max', { type: 'number', min: 0, step: 1, value: f.creditMax, placeholder: '不限' }),
-    ),
-  )
   form.append(fieldset('關鍵字', input('keyword', { type: 'search', value: f.keyword, placeholder: '課名、老師或課號' })))
 
-  const exReg = choice('checkbox', 'exclude', 'registered', '已在正式選課的課', f.excludeRegistered)
-  exReg.querySelector('input').id = 'exclude-registered'
-  const exPre = choice('checkbox', 'exclude', 'preregist', '已在預排的課', f.excludePreregist)
-  exPre.querySelector('input').id = 'exclude-preregist'
-  form.append(fieldset('排除', exReg, exPre))
 }
 
 function readFilters() {
@@ -145,22 +121,13 @@ function readFilters() {
     sort: $('#sort').value,
     campuses: checked('campus'),
     categories: checked('category'),
-    creditMin: $('#credit-min').value,
-    creditMax: $('#credit-max').value,
     keyword: $('#keyword').value,
-    excludeRegistered: $('#exclude-registered').checked,
-    excludePreregist: $('#exclude-preregist').checked,
   }
   save()
   renderResults()
 }
 
 // ---------- 結果 ----------
-
-function idsOf(source) {
-  const src = (state.schedule.sources || {})[source]
-  return new Set(((src && src.courses) || []).map((c) => String(c.cos_id)))
-}
 
 function renderResults() {
   const list = courses()
@@ -175,13 +142,11 @@ function renderResults() {
     $('#results').replaceChildren()
     return
   }
-  const f = state.filters
-  const excludeIds = [...(f.excludeRegistered ? idsOf('registered') : []), ...(f.excludePreregist ? idsOf('preregist') : [])]
-  const found = findCourses(list, { ...f, selection: state.selection, excludeIds })
+  const found = findCourses(list, { ...state.filters, selection: state.selection, excludeIds: [] })
   summary.textContent = found.truncated ? `共 ${found.total} 門，只顯示前 ${RESULT_LIMIT} 門，請再縮小條件` : `共 ${found.total} 門`
   renderResultList($('#results'), found, {
     semester: state.courseData.semester,
-    preregIds: idsOf('preregist'),
+    statuses: courseStatuses(state.schedule),
     addState,
     onHover: (hit) => grid.preview(hit ? hit.keys.filter((k) => state.selection.has(k)) : [], hit ? hit.outside : []),
     onAdd: addCourse,
@@ -240,6 +205,7 @@ async function submitAdd(course, option) {
   if (result && (result.status === 'added' || result.status === 'exists')) {
     addState.set(course.id, { status: result.status, note: option ? option.label : '' })
     $('#cos-hint').hidden = true
+    syncStatus()
   } else if (result) {
     addState.set(course.id, { status: 'error', msg: result.msg || '加入失敗' })
   } else {
@@ -248,10 +214,46 @@ async function submitAdd(course, option) {
   renderResults()
 }
 
+// ---------- 課程狀態 ----------
+// 主動更新：按「從選課網更新狀態」；順便更新：加入、加選、登記成功後自動呼叫 syncStatus
+
+let statusMessage = ''
+
+async function syncStatus() {
+  const reply = await askCos({ type: 'courses' })
+  if (!reply || !reply.ok) return needsCos(reply) ? '請先開啟並登入選課網，狀態維持原樣。' : `${cosProblem(reply)}，狀態維持原樣。`
+  const { schedule } = await chrome.storage.local.get('schedule')
+  await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
+  return ''
+}
+
+function statusAtText() {
+  const sources = state.schedule.sources || {}
+  const at = Math.max(...['registered', 'preregist'].map((n) => (sources[n] && sources[n].updatedAt) || 0))
+  if (!at) return '狀態還沒從選課網讀過'
+  const d = new Date(at)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `狀態更新於 ${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function renderLegend() {
+  const legend = $('#legend')
+  legend.replaceChildren(
+    ...Object.entries(KIND_LABELS).map(([kind, label]) => {
+      const item = document.createElement('span')
+      const dot = document.createElement('i')
+      dot.style.background = KIND_COLORS[kind]
+      item.append(dot, kind === 'manual' ? `${label}（顏色可在課表頁設定）` : label)
+      return item
+    }),
+  )
+}
+
 // ---------- 初始化 ----------
 
 function render() {
-  grid.render(state.selection, occupiedLabels())
+  grid.render(state.selection, occupiedKinds(state.schedule))
+  $('#status-at').textContent = statusMessage || statusAtText()
   $('#count').textContent = `已選 ${state.selection.size} 格`
   renderResults()
 }
@@ -268,6 +270,15 @@ async function init() {
   })
   $('#filters').addEventListener('change', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()
+  })
+  renderLegend()
+  $('#refresh-status').addEventListener('click', async () => {
+    const btn = $('#refresh-status')
+    btn.disabled = true
+    $('#status-at').textContent = '更新中…'
+    statusMessage = await syncStatus()
+    btn.disabled = false
+    $('#status-at').textContent = statusMessage || statusAtText()
   })
   $('#fill-registered').addEventListener('click', () => fill(['registered']))
   $('#fill-all').addEventListener('click', () => fill(['registered', 'preregist']))

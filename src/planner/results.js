@@ -19,6 +19,9 @@ function card(hit, ctx) {
   title.className = 'title'
   if (url) Object.assign(title, { href: url, target: '_blank', rel: 'noreferrer', title: '開啟課程大綱' })
   title.textContent = `${course.id} ${course.name}`
+  const status = ctx.statuses.get(course.id)
+  const badge = status ? span('badge', status.label) : null
+  if (badge) badge.dataset.state = status.state
   const { campuses, rooms } = courseSlots(course)
   const meta = document.createElement('div')
   meta.className = 'meta'
@@ -33,7 +36,9 @@ function card(hit, ctx) {
   ]
     .filter(Boolean)
     .join('・')
-  info.append(title, meta)
+  info.append(title)
+  if (badge) info.append(badge)
+  info.append(meta)
   if (hit.outside.length) {
     const out = document.createElement('div')
     out.className = 'outside'
@@ -46,15 +51,15 @@ function card(hit, ctx) {
   const s = ctx.addState.get(course.id)
   if (s && s.status === 'added') {
     actions.append(span('ok', `已加入${s.note ? `・${s.note}` : ''}`))
-  } else if (ctx.preregIds.has(course.id) || (s && s.status === 'exists')) {
-    actions.append(span('ok', '已在預排'))
+  } else if (status || (s && s.status === 'exists')) {
+    // 已在預排、登記中或已選上：不再顯示「加入預排」，狀態看標籤
   } else if (s && s.status === 'pending') {
     actions.append(span('muted', '加入中…'))
   } else if (!s || s.status !== 'choose') {
     if (s && s.status === 'error') actions.append(span('error', s.msg))
     const btn = document.createElement('button')
     btn.type = 'button'
-    btn.textContent = s && s.status === 'error' ? '重試' : '加入'
+    btn.textContent = s && s.status === 'error' ? '重試' : '加入預排'
     btn.title = '加入預排'
     btn.addEventListener('click', () => ctx.onAdd(course))
     actions.append(btn)

@@ -136,7 +136,8 @@ async function courseLists() {
   }
   const [preregist, registered] = await Promise.all([read('getpreregist'), read('getregist')])
   if (preregist === null && registered === null) return null
-  const slim = (list) => (list || []).map((c) => ({
+  // 讀取失敗的清單回傳 null（不是空陣列），呼叫端才知道要保留原本的資料
+  const slim = (list) => (list === null ? null : list.map((c) => ({
     cos_id: c.cos_id,
     cos_cname: c.cos_cname,
     cos_time: c.cos_time,
@@ -160,7 +161,7 @@ async function courseLists() {
     // 分發課程登記志願後 sFlag 是志願序，分發完成才是 F
     sFlag: c.sFlag,
     GroupUID: c.GroupUID,
-  }))
+  })))
   return { preregist: slim(preregist), registered: slim(registered) }
 }
 

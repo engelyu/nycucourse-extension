@@ -352,8 +352,9 @@ async function refreshRegistered() {
   if (!reply || !reply.ok) return
   const { schedule } = await chrome.storage.local.get('schedule')
   await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
-  state.registered = new Map((reply.registered || []).map((c) => [String(c.cos_id), c]))
-  state.courses = reply.preregist || []
+  // 讀取失敗的清單是 null：保留畫面上原本的狀態
+  if (reply.registered) state.registered = new Map(reply.registered.map((c) => [String(c.cos_id), c]))
+  if (reply.preregist) state.courses = reply.preregist
 }
 
 // ---------- 每日自動登記 ----------
