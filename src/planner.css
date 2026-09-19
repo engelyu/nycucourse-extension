@@ -100,3 +100,10 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .card .badge[data-state="registered"] { background: #16a34a; }
 .card .badge[data-state="wish"] { background: #ea580c; }
 .card .badge[data-state="preregist"] { background: #64748b; }
+.card .query-rows { flex-basis: 100%; display: grid; gap: 4px; margin-top: 2px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.card .query-row { display: flex; gap: 10px; align-items: center; font-size: 12px; }
+.card .query-row .how { min-width: 140px; font-weight: 600; }
+.card .query-row .avail { flex: 1; }
+.card .query-row .avail.ok { color: var(--ok); }
+.card .query-row .avail.error { color: var(--error); }
+.card .muted { color: var(--muted); font-size: 12px; }

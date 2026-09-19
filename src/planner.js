@@ -1,8 +1,10 @@
 // 選課規劃頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
-import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts } from './lib/freeslots.js'
-import { findAttributionOptions, needsChoice, preregParams, courseDepUids } from './lib/attribution.js'
+import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys } from './lib/freeslots.js'
+import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution } from './lib/attribution.js'
+import { resolveRegInfo, describeAvailability } from './lib/register.js'
+import { createRegisterDialog } from './reg-dialog.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
 import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
@@ -150,6 +152,8 @@ function renderResults() {
     addState,
     onHover: (hit) => grid.preview(hit ? hit.keys.filter((k) => state.selection.has(k)) : [], hit ? hit.outside : []),
     onAdd: addCourse,
+    onQuery: queryCourse,
+    onRegister: registerCourse,
     onChoose: (course, option) => submitAdd(course, option),
     onCancel: (course) => {
       addState.delete(course.id)
@@ -162,29 +166,40 @@ function renderResults() {
 
 const needsCos = (reply) => reply && (reply.reason === 'no_tab' || reply.reason === 'not_logged_in' || reply.reason === 'no_content_script')
 
+const cosError = (reply) => Object.assign(new Error(cosProblem(reply)), { reply })
+const errorText = (err, fallback) => (needsCos(err && err.reply) ? '請先開啟並登入選課網' : (err && err.message) || fallback)
+
+async function loadDepTree() {
+  if (depTree) return depTree
+  const reply = await askCos({ type: 'deptree' })
+  if (!reply || !reply.ok) throw cosError(reply)
+  depTree = reply.tree
+  return depTree
+}
+
+// 這門課在選課網有哪些採計方式（加入預排與查詢共用）
+function attributionOptionsFor(course) {
+  return findAttributionOptions({
+    cosId: course.id,
+    courseName: course.name,
+    depUids: courseDepUids(course),
+    getTree: loadDepTree,
+    getList: async (menu) => {
+      const reply = await askCos({ type: 'courselist', menu })
+      if (reply && reply.ok) return reply.list
+      throw cosError(reply)
+    },
+  })
+}
+
 async function addCourse(course) {
   addState.set(course.id, { status: 'pending' })
   renderResults()
   let options = []
   try {
-    if (!depTree) {
-      const reply = await askCos({ type: 'deptree' })
-      if (!reply || !reply.ok) throw Object.assign(new Error(cosProblem(reply)), { reply })
-      depTree = reply.tree
-    }
-    options = await findAttributionOptions({
-      cosId: course.id,
-      courseName: course.name,
-      depUids: courseDepUids(course),
-      getTree: async () => depTree,
-      getList: async (menu) => {
-        const reply = await askCos({ type: 'courselist', menu })
-        if (reply && reply.ok) return reply.list
-        throw Object.assign(new Error(cosProblem(reply)), { reply })
-      },
-    })
+    options = await attributionOptionsFor(course)
   } catch (err) {
-    addState.set(course.id, { status: 'error', msg: needsCos(err && err.reply) ? '請先開啟並登入選課網' : (err && err.message) || '查詢失敗' })
+    addState.set(course.id, { status: 'error', msg: errorText(err, '查詢失敗') })
     renderResults()
     return
   }
@@ -194,6 +209,79 @@ async function addCourse(course) {
     return
   }
   submitAdd(course, options[0] || null)
+}
+
+// ---------- 查詢與加選／登記 ----------
+
+function preregItem(id) {
+  const src = (state.schedule.sources || {}).preregist
+  return ((src && src.courses) || []).find((c) => String(c.cos_id) === String(id)) || null
+}
+
+// 查詢能不能加選：已在預排用預排記的採計方式；不在預排就每種採計方式各查一次
+async function queryCourse(course) {
+  addState.set(course.id, { status: 'querying' })
+  renderResults()
+  try {
+    const item = preregItem(course.id)
+    const rows = []
+    if (item) {
+      const reply = await resolveRegInfo({
+        course: item,
+        timetableMenu: course.menu || null,
+        askRegInfo: (menu) => askCos({ type: 'reginfo', cosId: course.id, menu }),
+        getDepTree: loadDepTree,
+      })
+      if (!reply || !reply.ok) throw cosError(reply)
+      rows.push({ label: describeAttribution(item), option: null, record: reply.record, availability: describeAvailability(reply.record), inPrereg: true })
+    } else {
+      for (const option of await attributionOptionsFor(course)) {
+        const reply = await askCos({ type: 'reginfo', cosId: course.id, menu: { ...option.menu, category_type: option.row.category_type || '' } })
+        if (!reply || !reply.ok) throw cosError(reply)
+        const record = reply.json && typeof reply.json === 'object' && reply.json[course.id] ? reply.json[course.id] : null
+        rows.push({ label: option.label, option, record, availability: describeAvailability(record), inPrereg: false })
+      }
+    }
+    addState.set(course.id, rows.length ? { status: 'queried', rows } : { status: 'error', msg: '在選課網找不到這門課' })
+  } catch (err) {
+    addState.set(course.id, { status: 'error', msg: errorText(err, '查詢失敗') })
+  }
+  renderResults()
+}
+
+let dialog = null
+let groups = null
+
+// 加選／登記：不在預排就先用這種採計方式加入預排，再開確認視窗；按「確認送出」才會送出
+async function registerCourse(course, row) {
+  const before = addState.get(course.id)
+  addState.set(course.id, { ...before, busy: true })
+  renderResults()
+  if (!row.inPrereg && row.option) {
+    const added = await askCos({ type: 'import', ids: [course.id], params: { [course.id]: preregParams(course.id, row.option) } })
+    const result = added && added.ok && added.results && added.results[0]
+    if (!result || (result.status !== 'added' && result.status !== 'exists')) {
+      addState.set(course.id, { status: 'error', msg: result ? result.msg || '加入預排失敗' : needsCos(added) ? '請先開啟並登入選課網' : cosProblem(added) })
+      renderResults()
+      return
+    }
+  }
+  if (row.availability.needsWish && !groups) {
+    const g = await askCos({ type: 'wishgroups' })
+    groups = g && g.ok ? g.groups : {}
+  }
+  const outcome = await dialog.open({
+    heading: `${course.id} ${course.name}`,
+    detail: [course.teacher, describeKeys(courseSlots(course).keys)].filter(Boolean).join(' · '),
+    check: { record: row.record, availability: row.availability },
+    groups,
+  })
+  groups = null
+  if (!outcome) addState.set(course.id, { ...before, busy: false })
+  else addState.set(course.id, outcome.ok ? { status: 'registered', msg: outcome.message } : { status: 'error', msg: outcome.message })
+  renderResults()
+  // 取消時課也可能已經加進預排，所以一律重讀狀態
+  await syncStatus()
 }
 
 async function submitAdd(course, option) {
@@ -264,6 +352,7 @@ async function init() {
   if (stored.schedule) state.schedule = stored.schedule
   state.courseData = stored.courseData || null
   grid = createSlotGrid($('#grid'), { onChange: setSelection })
+  dialog = createRegisterDialog()
   buildFilters()
   $('#filters').addEventListener('input', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()

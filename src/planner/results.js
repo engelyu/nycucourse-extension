@@ -49,22 +49,48 @@ function card(hit, ctx) {
   const actions = document.createElement('div')
   actions.className = 'actions'
   const s = ctx.addState.get(course.id)
-  if (s && s.status === 'added') {
-    actions.append(span('ok', `已加入${s.note ? `・${s.note}` : ''}`))
-  } else if (status || (s && s.status === 'exists')) {
-    // 已在預排、登記中或已選上：不再顯示「加入預排」，狀態看標籤
-  } else if (s && s.status === 'pending') {
-    actions.append(span('muted', '加入中…'))
+  const inPrereg = Boolean(status) || (s && (s.status === 'added' || s.status === 'exists'))
+  const button = (text, title, onClick) => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = text
+    b.title = title
+    b.disabled = Boolean(s && s.busy)
+    b.addEventListener('click', onClick)
+    return b
+  }
+  if (status && status.state === 'registered') {
+    // 已選上：不提供任何操作（不做退選）
+  } else if (s && (s.status === 'pending' || s.status === 'querying')) {
+    actions.append(span('muted', s.status === 'pending' ? '加入中…' : '查詢中…'))
+  } else if (s && s.status === 'registered') {
+    actions.append(span('ok', s.msg))
   } else if (!s || s.status !== 'choose') {
+    if (s && s.status === 'added') actions.append(span('ok', `已加入${s.note ? `・${s.note}` : ''}`))
     if (s && s.status === 'error') actions.append(span('error', s.msg))
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.textContent = s && s.status === 'error' ? '重試' : '加入預排'
-    btn.title = '加入預排'
-    btn.addEventListener('click', () => ctx.onAdd(course))
-    actions.append(btn)
+    if (!inPrereg) actions.append(button('加入預排', '加入預排（有多種採計方式時會先讓你選）', () => ctx.onAdd(course)))
+    actions.append(button(s && s.status === 'queried' ? '重新查詢' : '查詢', '查詢能不能加選、人數與衝堂', () => ctx.onQuery(course)))
   }
   li.append(info, actions)
+
+  if (s && s.status === 'queried' && !(status && status.state === 'registered')) {
+    const box = document.createElement('div')
+    box.className = 'query-rows'
+    for (const row of s.rows) {
+      const r = document.createElement('div')
+      r.className = 'query-row'
+      const a = row.availability
+      const ok = a.canRegister
+      const text = ok ? [a.needsWish ? '可登記（志願序）' : '可加選', a.seats, ...a.reasons].filter(Boolean).join('・') : [(a.message || '不能選').replace(/[。.]\s*$/, ''), a.seats].filter(Boolean).join('・')
+      r.append(span('how', row.label), span(ok ? 'avail ok' : 'avail error', text))
+      if (ok) {
+        const label = status && status.state === 'wish' && a.needsWish ? '改志願' : a.needsWish ? '登記' : '加選'
+        r.append(button(label, row.inPrereg ? '開啟確認視窗' : '先加入預排，再開啟確認視窗', () => ctx.onRegister(course, row)))
+      }
+      box.append(r)
+    }
+    li.append(box)
+  }
 
   if (s && s.status === 'choose') {
     const box = document.createElement('div')
