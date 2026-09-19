@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NYCU 預排課程匯入",
-  "version": "0.9.0",
-  "description": "搜尋陽明交大課程，一鍵加入預排或正式選課，並提供我的課表與每日自動登記。",
+  "version": "0.9.1",
+  "description": "搜尋與規劃陽明交大課程：找空堂、加入預排與正式選課，並提供課表與每日自動登記。",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -16,12 +16,23 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "permissions": ["storage", "alarms"],
-  "host_permissions": ["https://cos.nycu.edu.tw/*", "https://timetable.nycu.edu.tw/*"],
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://cos.nycu.edu.tw/*",
+    "https://timetable.nycu.edu.tw/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://cos.nycu.edu.tw/*"],
-      "js": ["src/lib/classify.js", "src/content.js"],
+      "matches": [
+        "https://cos.nycu.edu.tw/*"
+      ],
+      "js": [
+        "src/lib/classify.js",
+        "src/content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

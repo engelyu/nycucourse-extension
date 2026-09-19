@@ -99,9 +99,10 @@ function courseRow(course) {
   } else {
     actions.append(stateLabel(s))
   }
-  if (s && s.status === 'choose') li.append(choiceRow(course.id, s.options))
 
   li.append(info, actions)
+  // 採計方式的選項放在這門課下面，才看得出是哪一門的
+  if (s && s.status === 'choose') li.append(choiceRow(course.id, s.options))
   return li
 }
 
