@@ -40,3 +40,11 @@ test('occupiedKinds 依優先順序分類格子並帶顏色', () => {
   const noColor = occupiedKinds({ sources: {}, manual: [{ key: 'manual:y', source: 'manual', title: 'x', slots: [{ day: 2, period: '1' }] }] })
   assert.equal(noColor.get('2-1').color, KIND_COLORS.manual)
 })
+
+test('occupiedKinds 附上非顏色的標記：已選上 ✓、登記中志願序、在預排「預」', () => {
+  const k = occupiedKinds(schedule)
+  assert.equal(k.get('1-1').mark, '✓')
+  assert.equal(k.get('4-5').mark, '②')
+  assert.equal(k.get('2-3').mark, '預')
+  assert.equal(k.get('3-a').mark, '')
+})

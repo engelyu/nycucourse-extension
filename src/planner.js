@@ -419,7 +419,8 @@ function renderLegend() {
       const item = document.createElement('span')
       const dot = document.createElement('i')
       dot.style.background = KIND_COLORS[kind]
-      item.append(dot, kind === 'manual' ? `${label}（顏色可在課表頁設定）` : label)
+      const mark = { registered: '✓ ', wish: '①② ', preregist: '預 ', manual: '' }[kind]
+      item.append(dot, `${mark}${label}`, kind === 'manual' ? '（顏色可在課表頁設定）' : '')
       return item
     }),
   )

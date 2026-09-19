@@ -4,7 +4,15 @@ import { scheduleItems } from './schedule.js'
 import { registrationState } from './register.js'
 import { describeAttribution } from './attribution.js'
 
-export const KIND_COLORS = { registered: '#16a34a', wish: '#ea580c', preregist: '#64748b', manual: '#8b5cf6' }
+// Okabe-Ito 配色：常見色弱（紅綠、藍黃）也分得出來；另外搭配文字標記，不只靠顏色
+export const KIND_COLORS = { registered: '#009E73', wish: '#E69F00', preregist: '#0072B2', manual: '#CC79A7' }
+const CIRCLED = ['', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨']
+function markOf(kind, item) {
+  if (kind === 'registered') return '✓'
+  if (kind === 'wish') return CIRCLED[item.wishNo] || '志'
+  if (kind === 'preregist') return '預'
+  return ''
+}
 export const KIND_LABELS = { registered: '正式選上', wish: '登記中', preregist: '在預排', manual: '私人行程' }
 const PRIORITY = ['registered', 'wish', 'preregist', 'manual']
 
@@ -39,12 +47,15 @@ export function occupiedKinds(schedule) {
     for (const s of item.slots || []) {
       const key = `${s.day}-${s.period}`
       const cur = out.get(key)
+      const mark = markOf(kind, item)
       if (!cur) {
-        out.set(key, { kind, color, titles: [item.title] })
+        out.set(key, { kind, color, mark, titles: [item.title] })
         continue
       }
-      cur.titles.push(item.title)
-      if (PRIORITY.indexOf(kind) < PRIORITY.indexOf(cur.kind)) Object.assign(cur, { kind, color })
+      if (PRIORITY.indexOf(kind) < PRIORITY.indexOf(cur.kind)) {
+        Object.assign(cur, { kind, color, mark })
+        cur.titles.unshift(item.title)
+      } else cur.titles.push(item.title)
     }
   }
   return out

@@ -88,7 +88,7 @@ export function createSlotGrid(container, { onChange }) {
         cell.classList.toggle('busy', Boolean(info))
         cell.dataset.kind = info ? info.kind : ''
         cell.style.setProperty('--kind', info ? info.color : 'transparent')
-        cell.textContent = info ? info.titles[0] : ''
+        cell.textContent = info ? [info.mark, info.titles[0]].filter(Boolean).join(' ') : ''
         cell.title = info ? info.titles.join('、') : ''
       }
     },
