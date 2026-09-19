@@ -9,30 +9,49 @@
 <body>
   <header class="page-head">
     <h1>當期選課</h1>
-    <p class="sub">找空堂課程：框選想上課的時段，找出落在這些時段的課。</p>
     <div class="status-bar"><button id="refresh-status" type="button">從選課網更新狀態</button><span id="status-at" class="muted"></span></div>
   </header>
   <main class="layout">
-    <section class="left">
-      <div class="toolbar">
-        <button id="fill-registered" type="button">帶入空堂：避開正式選課</button>
-        <button id="fill-all" type="button">帶入空堂：避開正式選課＋預排</button>
-        <button id="clear" type="button">全部清除</button>
-        <button id="undo" type="button" title="復原上一步（⌘Z／Ctrl+Z）" disabled>復原</button>
-        <span id="count" class="muted"></span>
+    <section class="results-pane" aria-label="搜尋結果">
+      <div class="results-bar">
+        <input id="keyword" type="search" placeholder="關鍵字：課名、老師或課號" aria-label="關鍵字" autocomplete="off">
+        <button id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel">篩選</button>
+        <label class="sort-label">排序 <select id="sort"></select></label>
       </div>
-      <p class="muted tip">按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。</p>
-      <div id="legend" class="legend"></div>
-      <div id="grid" class="slot-grid"></div>
-      <form id="filters" class="filters" autocomplete="off"></form>
-    </section>
-    <section class="right">
-      <p id="summary" class="summary"></p>
+      <div id="narrow-slot"></div>
       <div id="applied" class="applied" hidden></div>
+      <p id="summary" class="summary"></p>
       <p id="cos-hint" class="muted" hidden></p>
       <div id="results"></div>
     </section>
+    <section class="plan-pane" aria-label="正式課表">
+      <div id="legend" class="legend"></div>
+      <p id="hidden-note" class="muted hidden-note" hidden></p>
+      <div id="timetable" class="timetable"></div>
+      <aside id="filter-panel" class="filter-panel" aria-label="篩選" hidden>
+        <div class="panel-head">
+          <h2>篩選</h2>
+          <button id="filter-close" type="button" aria-label="關閉篩選">✕</button>
+        </div>
+        <section class="panel-block">
+          <h3>時段</h3>
+          <div class="toolbar">
+            <button id="fill-registered" type="button">帶入空堂：避開正式選課</button>
+            <button id="fill-all" type="button">帶入空堂：避開正式選課＋預排</button>
+            <button id="clear" type="button">全部清除</button>
+            <button id="undo" type="button" title="復原上一步（⌘Z／Ctrl+Z）" disabled>復原</button>
+            <span id="count" class="muted"></span>
+          </div>
+          <p class="muted tip">框選想上課的時段，找出落在這些時段的課。按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。</p>
+          <div id="grid-legend" class="legend"></div>
+          <div id="grid" class="slot-grid"></div>
+        </section>
+        <form id="filters" class="filters" autocomplete="off"></form>
+      </aside>
+    </section>
   </main>
+  <dialog id="detail" class="detail"></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
   <script type="module" src="planner.js"></script>
 </body>
 </html>
