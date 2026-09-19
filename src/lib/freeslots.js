@@ -24,7 +24,17 @@ export const campusName = (code) => CAMPUS_NAMES.get(str(code)) || str(code)
 
 const unique = (list) => [...new Set(list)]
 
+const slotCache = new WeakMap()
+
+// 課程的時段、校區、教室；同一個課程物件只解析一次（篩選時每門課會算很多次）
 export function courseSlots(course) {
+  if (course && typeof course === 'object' && slotCache.has(course)) return slotCache.get(course)
+  const result = parseCourseSlots(course)
+  if (course && typeof course === 'object') slotCache.set(course, result)
+  return result
+}
+
+function parseCourseSlots(course) {
   const slots = parseCosTime(course && course.time)
   const keys = unique(slots.map((s) => slotKey(s.day, s.period))).sort((a, b) => ORDER.get(a) - ORDER.get(b))
   return {
@@ -172,4 +182,43 @@ export function findCourses(courses, filters) {
   const keepInside = inside.slice(0, RESULT_LIMIT)
   const keepOverlap = overlap.slice(0, Math.max(0, RESULT_LIMIT - keepInside.length))
   return { total, inside: keepInside, overlap: keepOverlap, truncated: total > RESULT_LIMIT }
+}
+
+// ---------- 篩選的回饋：已套用的篩選、各選項的門數、零結果時的建議 ----------
+
+const MULTI_FIELDS = ['campuses', 'categories', 'deps']
+
+export function appliedFilters(filters) {
+  const f = filters || {}
+  const out = []
+  for (const code of f.campuses || []) out.push({ field: 'campuses', value: code, label: campusName(code) })
+  for (const c of f.categories || []) out.push({ field: 'categories', value: c, label: c })
+  for (const d of f.deps || []) out.push({ field: 'deps', value: d, label: d })
+  if (str(f.keyword).trim()) out.push({ field: 'keyword', value: '', label: `關鍵字：${str(f.keyword).trim()}` })
+  return out
+}
+
+export function withoutFilter(filters, field, value) {
+  if (field === 'keyword') return { ...filters, keyword: '' }
+  if (!MULTI_FIELDS.includes(field)) return { ...filters }
+  return { ...filters, [field]: (filters[field] || []).filter((v) => v !== value) }
+}
+
+// 每個選項如果改成只選它（其他條件不變）會有幾門，用來顯示在選項旁
+export function facetCounts(courses, filters, field, values) {
+  return new Map(values.map((v) => [v, findCourses(courses, { ...filters, [field]: [v] }).total]))
+}
+
+// 零結果時的建議：改成部分重疊，或逐一拿掉已套用的篩選
+export function relaxations(courses, filters) {
+  const tips = []
+  if (filters.mode !== 'overlap') {
+    const next = { ...filters, mode: 'overlap' }
+    tips.push({ label: '改成部分重疊', filters: next, total: findCourses(courses, next).total })
+  }
+  for (const a of appliedFilters(filters)) {
+    const next = withoutFilter(filters, a.field, a.value)
+    tips.push({ label: `拿掉「${a.label}」`, filters: next, total: findCourses(courses, next).total })
+  }
+  return tips
 }

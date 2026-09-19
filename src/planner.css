@@ -107,3 +107,12 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .card .query-row .avail.ok { color: var(--ok); }
 .card .query-row .avail.error { color: var(--error); }
 .card .muted { color: var(--muted); font-size: 12px; }
+
+/* 篩選回饋：已套用的篩選、選項門數、零結果建議 */
+.applied { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin: 0 0 8px; }
+.applied[hidden] { display: none; }
+.chip { padding: 1px 8px; border: 1px solid var(--accent); border-radius: 999px; background: var(--sel); font-size: 12px; cursor: pointer; }
+.facet-count { color: var(--muted); font-size: 11px; }
+.filters label.empty { opacity: .5; }
+.zero { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.zero p { flex-basis: 100%; margin: 0 0 4px; }

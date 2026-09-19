@@ -143,3 +143,32 @@ test('courseDeps 合併主開系所與所有出現的系所；系所篩選比對
     { name: '醫學系', count: 1 },
   ])
 })
+
+test('appliedFilters 列出已套用的篩選，withoutFilter 逐一拿掉', async () => {
+  const { appliedFilters, withoutFilter } = await import('../src/lib/freeslots.js')
+  const f = { ...base, campuses: ['YM'], categories: ['必修'], deps: ['資工系'], keyword: ' 線代 ' }
+  assert.deepEqual(appliedFilters(f).map((a) => a.label), ['陽明', '必修', '資工系', '關鍵字：線代'])
+  assert.deepEqual(withoutFilter(f, 'campuses', 'YM').campuses, [])
+  assert.equal(withoutFilter(f, 'keyword', '').keyword, '')
+  assert.deepEqual(appliedFilters(base), [])
+})
+
+test('facetCounts：每個選項套用後會有幾門（其他條件不變）', async () => {
+  const { facetCounts } = await import('../src/lib/freeslots.js')
+  const counts = facetCounts(courses, base, 'campuses', ['GF', 'YM', 'BA'])
+  assert.deepEqual(Object.fromEntries(counts), { GF: 1, YM: 1, BA: 0 })
+  const cat = facetCounts(courses, { ...base, campuses: ['GF'] }, 'categories', ['必修', '核心・基本素養'])
+  assert.deepEqual(Object.fromEntries(cat), { 必修: 1, 核心・基本素養: 0 })
+})
+
+test('relaxations：零結果時建議放寬哪個條件，並附放寬後的門數', async () => {
+  const { relaxations } = await import('../src/lib/freeslots.js')
+  const f = { ...base, campuses: ['YM'], categories: ['必修'] }
+  assert.equal(findCourses(courses, f).total, 0)
+  const tips = relaxations(courses, f)
+  assert.deepEqual(tips.map((t) => [t.label, t.total]), [
+    ['改成部分重疊', 0],
+    ['拿掉「陽明」', 1],
+    ['拿掉「必修」', 1],
+  ])
+})

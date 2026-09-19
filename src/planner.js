@@ -1,7 +1,7 @@
 // 選課規劃頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
-import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys } from './lib/freeslots.js'
+import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations } from './lib/freeslots.js'
 import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution } from './lib/attribution.js'
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
@@ -65,8 +65,77 @@ function fieldset(legend, ...children) {
 function choice(type, name, value, text, checked, disabled = false) {
   const label = document.createElement('label')
   const input = Object.assign(document.createElement('input'), { type, name, value, checked, disabled })
-  label.append(input, ` ${text}`)
+  // 選項旁的門數（只有校區、類別會填）
+  const count = Object.assign(document.createElement('span'), { className: 'facet-count' })
+  label.append(input, ` ${text}`, count)
   return label
+}
+
+// 換一組篩選條件（已套用篩選的 ×、零結果的建議、清除全部篩選都走這裡）
+function applyFilters(next) {
+  state.filters = { ...DEFAULT_FILTERS, ...next }
+  save()
+  buildFilters()
+  renderResults()
+}
+
+function renderApplied() {
+  const box = $('#applied')
+  const applied = appliedFilters(state.filters)
+  box.replaceChildren()
+  box.hidden = !applied.length
+  for (const a of applied) {
+    const chip = document.createElement('button')
+    chip.type = 'button'
+    chip.className = 'chip'
+    chip.textContent = `${a.label} ×`
+    chip.title = `拿掉「${a.label}」`
+    chip.addEventListener('click', () => applyFilters(withoutFilter(state.filters, a.field, a.value)))
+    box.append(chip)
+  }
+  if (applied.length) {
+    const clear = document.createElement('button')
+    clear.type = 'button'
+    clear.className = 'link'
+    clear.textContent = '清除全部篩選'
+    clear.addEventListener('click', () => applyFilters({ mode: state.filters.mode, sort: state.filters.sort }))
+    box.append(clear)
+  }
+}
+
+// 校區、類別選項旁顯示「選這個會有幾門」，沒有結果的選項變淡
+function renderFacetCounts(list) {
+  const form = $('#filters')
+  const f = { ...state.filters, selection: state.selection, excludeIds: [] }
+  for (const [name, field] of [['campus', 'campuses'], ['category', 'categories']]) {
+    const inputs = [...form.querySelectorAll(`input[name="${name}"]`)]
+    const counts = state.selection.size ? facetCounts(list, f, field, inputs.map((i) => i.value)) : new Map()
+    for (const input of inputs) {
+      const label = input.closest('label')
+      const n = counts.get(input.value)
+      label.querySelector('.facet-count').textContent = n === undefined ? '' : ` ${n}`
+      label.classList.toggle('empty', n === 0 && !input.checked)
+    }
+  }
+}
+
+function renderZero(list) {
+  const box = document.createElement('div')
+  box.className = 'zero'
+  box.append(Object.assign(document.createElement('p'), { textContent: '沒有符合的課。可以試試：' }))
+  const tips = relaxations(list, { ...state.filters, selection: state.selection, excludeIds: [] }).filter((t) => t.total > 0)
+  for (const t of tips) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = `${t.label}（${t.total} 門）`
+    b.addEventListener('click', () => {
+      const { selection, excludeIds, ...next } = t.filters
+      applyFilters(next)
+    })
+    box.append(b)
+  }
+  if (!tips.length) box.append(Object.assign(document.createElement('p'), { className: 'muted', textContent: '放寬篩選也沒有結果，試試多框一些時段。' }))
+  $('#results').replaceChildren(box)
 }
 
 function input(id, attrs) {
@@ -146,6 +215,9 @@ function renderResults() {
   }
   const found = findCourses(list, { ...state.filters, selection: state.selection, excludeIds: [] })
   summary.textContent = found.truncated ? `共 ${found.total} 門，只顯示前 ${RESULT_LIMIT} 門，請再縮小條件` : `共 ${found.total} 門`
+  renderApplied()
+  renderFacetCounts(list)
+  if (!found.total) return renderZero(list)
   renderResultList($('#results'), found, {
     semester: state.courseData.semester,
     statuses: courseStatuses(state.schedule),
