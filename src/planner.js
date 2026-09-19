@@ -340,7 +340,7 @@ async function queryCourse(course) {
 let dialog = null
 let groups = null
 
-// 加選／登記：不在預排就先用這種採計方式加入預排，再開確認視窗；按「確認送出」才會送出
+// 加選／登記：不在預排就先用這種採計方式加入預排，再開確認視窗；按「送出加選／送出登記」才會送出
 async function registerCourse(course, row) {
   const before = addState.get(course.id)
   addState.set(course.id, { ...before, busy: true })
