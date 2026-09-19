@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { slotKey, ALL_SLOTS, courseSlots, occupiedSlots, freeSlots, matchCourse, courseCategories, hasBriefData, describeKeys, findCourses, campusName, CAMPUSES } from '../src/lib/freeslots.js'
+import { slotKey, ALL_SLOTS, courseSlots, occupiedSlots, freeSlots, matchCourse, courseCategories, hasBriefData, describeKeys, findCourses, campusName, CAMPUSES, appliedCount } from '../src/lib/freeslots.js'
 import { manualItem, courseToItem } from '../src/lib/schedule.js'
 
 const c = (id, time, extra = {}) => ({ id, name: `課${id}`, ename: '', teacher: '老師', time, credit: '3.00', type: '選修', dep: '資工系', ...extra })
@@ -171,4 +171,9 @@ test('relaxations：零結果時建議放寬哪個條件，並附放寬後的門
     ['拿掉「陽明」', 1],
     ['拿掉「必修」', 1],
   ])
+})
+
+test('appliedCount：時段算一個，校區、類別、系所各算一個，關鍵字不算', () => {
+  assert.equal(appliedCount({ campuses: [], categories: [], deps: [], keyword: 'x' }, new Set()), 0)
+  assert.equal(appliedCount({ campuses: ['GF'], categories: ['必修', '選修'], deps: ['資工'], keyword: '' }, new Set(['1-3', '1-4'])), 5)
 })

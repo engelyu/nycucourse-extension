@@ -14,6 +14,7 @@ import {
   namedGroupMenus,
   needsChoice,
   courseDepUids,
+  restoreParams,
 } from '../src/lib/attribution.js'
 
 // 依 2026-09-19 選課網 getdep 的真實結構縮小
@@ -270,4 +271,14 @@ test('courseDepUids 合併新舊課程資料的系所', () => {
 
 test('homeMenus 不把核心課程、語言與溝通當成開課系所', () => {
   assert.deepEqual(homeMenus(tree, ['CORE', 'LANG'], '計算機概論'), [])
+})
+
+test('restoreParams 用預排紀錄組回加入預排的參數', () => {
+  const record = { cos_id: 112304, menu_data: '{&quot;type&quot;:3}', wType: 'E', GroupName: null, GroupName_E: 'G', category_type: null, category_cname: '量性推理', category_ename: undefined }
+  assert.deepEqual(restoreParams(record), {
+    cos_id: '112304', menu_data: '{"type":3}', wType: 'E', GroupName: 'null', GroupName_E: 'G',
+    category_type: '', category_cname: '量性推理', category_ename: 'null',
+  })
+  assert.equal(restoreParams({ cos_id: '1' }).menu_data, '{}')
+  assert.equal(restoreParams({ cos_id: '1' }).wType, 'X')
 })

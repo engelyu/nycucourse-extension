@@ -198,6 +198,12 @@ export function appliedFilters(filters) {
   return out
 }
 
+// 「篩選」按鈕上的數字：選了時段算一個，校區、類別、系所每個選項各算一個（關鍵字在按鈕旁邊，不算）
+export function appliedCount(filters, selection) {
+  const f = filters || {}
+  return (selection && selection.size ? 1 : 0) + (f.campuses || []).length + (f.categories || []).length + (f.deps || []).length
+}
+
 export function withoutFilter(filters, field, value) {
   if (field === 'keyword') return { ...filters, keyword: '' }
   if (!MULTI_FIELDS.includes(field)) return { ...filters }

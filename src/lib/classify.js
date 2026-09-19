@@ -101,5 +101,12 @@
     return { code, message }
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus })
+  // 從預排移除前的檢查：正式選課清單讀不到、或課已在正式選課裡（已選上／已登記）就不移除
+  function removalBlock(registeredList, cosId) {
+    if (!Array.isArray(registeredList)) return '讀不到正式選課清單，先不移除'
+    if (registeredList.some((c) => String(c && c.cos_id) === String(cosId))) return '這門課已在正式選課，不能從這裡移除'
+    return ''
+  }
+
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock })
 })(globalThis)
