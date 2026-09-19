@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import '../src/lib/classify.js'
 
-const { classifyResult, confirmWithList } = globalThis.NycuClassify
+const { classifyResult, confirmWithList, removalBlock } = globalThis.NycuClassify
 
 test('空回應代表成功加入', () => {
   assert.deepEqual(classifyResult('516702', ''), { id: '516702', status: 'added', msg: '' })
@@ -125,4 +125,11 @@ test('parseSysStatus 沒有訊息時回傳 null', () => {
 
 test('parseSysStatus 沒有狀態碼時 code 為空字串', () => {
   assert.deepEqual(parseSysStatus(JSON.stringify({ cmsg: '公告' })), { code: '', message: '公告' })
+})
+
+test('removalBlock：讀不到正式選課或課已在正式選課時不移除', () => {
+  assert.equal(removalBlock(null, '516701'), '讀不到正式選課清單，先不移除')
+  assert.equal(removalBlock([{ cos_id: '516701' }], '516701'), '這門課已在正式選課，不能從這裡移除')
+  assert.equal(removalBlock([{ cos_id: 516701 }], '516701'), '這門課已在正式選課，不能從這裡移除')
+  assert.equal(removalBlock([], '516701'), '')
 })

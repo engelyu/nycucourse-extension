@@ -167,6 +167,21 @@ export function preregParams(cosId, option) {
   }
 }
 
+// 用選課網的預排紀錄組回 setpreregist 參數：改採計方式失敗、移除後按復原時用來加回原本的樣子
+export function restoreParams(record) {
+  const text = (v) => (v == null ? 'null' : String(v))
+  return {
+    cos_id: String(record.cos_id),
+    menu_data: String(record.menu_data || '{}').replace(/&quot;/g, '"'),
+    wType: String(record.wType || 'X'),
+    GroupName: text(record.GroupName),
+    GroupName_E: text(record.GroupName_E),
+    category_type: record.category_type == null ? '' : String(record.category_type),
+    category_cname: text(record.category_cname),
+    category_ename: text(record.category_ename),
+  }
+}
+
 const MAX_HOME_TRIES = 15
 
 // 查出一門課可以用哪些方式採計。先找開課系所那一種（找到一次就停），

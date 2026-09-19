@@ -6,7 +6,7 @@ import { timeWarning } from './lib/autoreg.js'
 import { parseRegStatus } from './lib/regstatus.js'
 import { withSyncedSources } from './lib/schedule.js'
 import { askCos as ask, cosProblem as replyProblem } from './cos-tab.js'
-import { describeAttribution, findAttributionOptions, preregParams, attributionKey, courseDepUids } from './lib/attribution.js'
+import { describeAttribution, findAttributionOptions, preregParams, attributionKey, courseDepUids, restoreParams } from './lib/attribution.js'
 
 const $ = (sel) => document.querySelector(sel)
 
@@ -278,26 +278,11 @@ async function chooseAttribution(course, btn) {
   }
 }
 
-// 目前預排的參數，改失敗時用來還原
-function currentPreregParams(course) {
-  const text = (v) => (v == null ? 'null' : String(v))
-  return {
-    cos_id: String(course.cos_id),
-    menu_data: String(course.menu_data || '{}').replace(/&quot;/g, '"'),
-    wType: String(course.wType || 'X'),
-    GroupName: text(course.GroupName),
-    GroupName_E: text(course.GroupName_E),
-    category_type: course.category_type == null ? '' : String(course.category_type),
-    category_cname: text(course.category_cname),
-    category_ename: text(course.category_ename),
-  }
-}
-
 async function changeAttribution(course, option, btn) {
   const cosId = String(course.cos_id)
   btn.disabled = true
   btn.textContent = '變更中…'
-  const reply = await ask({ type: 'changepreregist', cosId, params: preregParams(cosId, option), previous: currentPreregParams(course) })
+  const reply = await ask({ type: 'changepreregist', cosId, params: preregParams(cosId, option), previous: restoreParams(course) })
   state.choosing = null
   state.checks.delete(cosId)
   if (!reply || !reply.ok) {

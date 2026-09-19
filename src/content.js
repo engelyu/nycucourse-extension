@@ -1,6 +1,6 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable, parseSysStatus } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
 function token() {
@@ -49,6 +49,30 @@ async function changePreregist(id, params, previous) {
   const restored = previous ? await addOne(id, previous) : null
   const note = restored && restored.status === 'added' ? '，已還原原本的預排' : '，而且無法還原原本的預排，請到選課網重新加入'
   return { ok: true, result: { ...result, status: 'error', msg: `${result.msg || '加入失敗'}${note}` } }
+}
+
+// 從預排移除一門課。先讀正式選課清單，確定不是已選上、已登記的課才刪（永遠不動正式選課）
+async function removePreregist(id) {
+  if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
+  const reg = await post('getregist', {})
+  let list = null
+  if (isOk(reg.status) && reg.text.trim()) {
+    try {
+      const parsed = JSON.parse(reg.text)
+      list = Array.isArray(parsed) ? parsed : null
+    } catch {}
+  }
+  const blocked = removalBlock(list, id)
+  if (blocked) return { ok: true, removed: false, msg: blocked }
+  const removed = await post('deletepreregist', { cos_id: id })
+  if (!isOk(removed.status)) return { ok: true, removed: false, msg: `移除失敗（HTTP ${removed.status}）` }
+  let first = null
+  try {
+    const parsed = JSON.parse(removed.text || '[]')
+    first = Array.isArray(parsed) ? parsed[0] : parsed
+  } catch {}
+  if (first && first.status && first.status !== 'success') return { ok: true, removed: false, msg: first.cmsg || first.emsg || '移除失敗' }
+  return { ok: true, removed: true }
 }
 
 // 選課網某個選單底下的課程清單，同一頁面短時間內重複使用
@@ -278,6 +302,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'changepreregist') {
     serial(() => changePreregist(String(message.cosId), message.params, message.previous)).then(
+      sendResponse,
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'removepreregist') {
+    serial(() => removePreregist(String(message.cosId))).then(
       sendResponse,
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
