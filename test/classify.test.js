@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import '../src/lib/classify.js'
 
-const { classifyResult, confirmWithList, removalBlock } = globalThis.NycuClassify
+const { classifyResult, confirmWithList, removalBlock, cancelBlock } = globalThis.NycuClassify
 
 test('空回應代表成功加入', () => {
   assert.deepEqual(classifyResult('516702', ''), { id: '516702', status: 'added', msg: '' })
@@ -132,4 +132,16 @@ test('removalBlock：讀不到正式選課或課已在正式選課時不移除',
   assert.equal(removalBlock([{ cos_id: '516701' }], '516701'), '這門課已在正式選課，不能從這裡移除')
   assert.equal(removalBlock([{ cos_id: 516701 }], '516701'), '這門課已在正式選課，不能從這裡移除')
   assert.equal(removalBlock([], '516701'), '')
+})
+
+// 取消登記（deleteregist）只能用在「已登記」的課。已選上（sFlag F）的課取消就是退選，
+// 停修（PFW W）的課也不碰。讀不到清單時一律不動。
+test('cancelBlock 只放行已登記的課', () => {
+  assert.equal(cancelBlock(null, '516713'), '讀不到正式選課清單，先不取消')
+  assert.equal(cancelBlock([], '516713'), '這門課不在正式選課清單裡')
+  assert.equal(cancelBlock([{ cos_id: '516713', sFlag: 'F' }], '516713'), '這門課已經選上，取消等於退選，不能從這裡做')
+  assert.equal(cancelBlock([{ cos_id: '516713', sFlag: 'F', Lock: '1' }], '516713'), '這門課已經選上，取消等於退選，不能從這裡做')
+  assert.equal(cancelBlock([{ cos_id: '516713', sFlag: '2', PFW: 'W' }], '516713'), '這門課是停修狀態，不能從這裡取消')
+  assert.equal(cancelBlock([{ cos_id: '516713', sFlag: '2' }], '516713'), '')
+  assert.equal(cancelBlock([{ cos_id: 516713, sFlag: '1' }], '516713'), '')
 })

@@ -1,6 +1,6 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock, cancelBlock } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
 function token() {
@@ -51,18 +51,38 @@ async function changePreregist(id, params, previous) {
   return { ok: true, result: { ...result, status: 'error', msg: `${result.msg || '加入失敗'}${note}` } }
 }
 
+// 讀正式選課清單；讀不到就回 null，呼叫端要當成「不確定」而不是「空的」
+async function readRegistered() {
+  const res = await post('getregist', {})
+  if (!isOk(res.status) || !res.text.trim()) return null
+  try {
+    const parsed = JSON.parse(res.text)
+    return Array.isArray(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+// 取消登記。deleteregist 同時是退選 API，所以先讀清單，只有「已登記」的課才往下走。
+async function cancelRegist(id) {
+  if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
+  const blocked = cancelBlock(await readRegistered(), id)
+  if (blocked) return { ok: true, cancelled: false, msg: blocked }
+  const res = await post('deleteregist', { cos_id: id })
+  if (!isOk(res.status)) return { ok: true, cancelled: false, msg: `取消失敗（HTTP ${res.status}）` }
+  let first = null
+  try {
+    const parsed = JSON.parse(res.text || '[]')
+    first = Array.isArray(parsed) ? parsed[0] : parsed
+  } catch {}
+  if (first && first.status && first.status !== 'success') return { ok: true, cancelled: false, msg: first.cmsg || first.emsg || '取消失敗' }
+  return { ok: true, cancelled: true }
+}
+
 // 從預排移除一門課。先讀正式選課清單，確定不是已選上、已登記的課才刪（永遠不動正式選課）
 async function removePreregist(id) {
   if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
-  const reg = await post('getregist', {})
-  let list = null
-  if (isOk(reg.status) && reg.text.trim()) {
-    try {
-      const parsed = JSON.parse(reg.text)
-      list = Array.isArray(parsed) ? parsed : null
-    } catch {}
-  }
-  const blocked = removalBlock(list, id)
+  const blocked = removalBlock(await readRegistered(), id)
   if (blocked) return { ok: true, removed: false, msg: blocked }
   const removed = await post('deletepreregist', { cos_id: id })
   if (!isOk(removed.status)) return { ok: true, removed: false, msg: `移除失敗（HTTP ${removed.status}）` }
@@ -302,6 +322,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'changepreregist') {
     serial(() => changePreregist(String(message.cosId), message.params, message.previous)).then(
+      sendResponse,
+      (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
+    )
+    return true
+  }
+  if (message.type === 'cancelregist') {
+    serial(() => cancelRegist(String(message.cosId))).then(
       sendResponse,
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )

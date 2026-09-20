@@ -317,11 +317,15 @@ async function loadGroups() {
 let dialog = null
 
 async function openConfirm(course, check) {
+  // 已登記志願的課：確認視窗會先取消再用新志願登記（選課網不接受直接重送）
+  const record = state.registered.get(String(course.cos_id))
+  const reg = record ? registrationState(record) : null
   const result = await dialog.open({
     heading: `${course.cos_id} ${course.cos_cname}`,
     detail: [course.lecturers, describeSlots(parseCosTime(course.cos_time))].filter(Boolean).join(' · '),
     check,
     groups: state.groups,
+    currentWish: reg && reg.state === 'wish' && reg.wishNo ? reg.wishNo : null,
   })
   if (!result) return
   showMessage(`${course.cos_id} ${course.cos_cname}：${result.message}`, result.ok ? '' : 'error')

@@ -90,14 +90,16 @@ test('沒有資料時視為不能加選', () => {
   assert.equal(a.message, '查不到這門課的加選資訊')
 })
 
-test('wishOptions 列出志願與目前佔用情形', () => {
-  const group = { GroupName: '體育', wish_limit: '5', cos_limit: '1', wish: { 1: '563018', 2: '0', 3: '0', 4: '0', 5: '0', F: '0' } }
+test('wishOptions 列出志願與各志願登記人數', () => {
+  // wish 的值是「這個志願已被幾門課用掉」；只有前五個志願有人數欄位
+  const group = { GroupName: '體育', wish_limit: '5', cos_limit: '1', wish: { 1: '1', 2: '0', 3: '0', 4: '0', 5: '0', F: '0' } }
   const options = wishOptions(group, peRecord)
   assert.equal(options.length, 5)
-  assert.deepEqual(options[0], { no: 1, takenBy: '563018', isThisCourse: false, reserved: '12' })
-  assert.deepEqual(options[1], { no: 2, takenBy: '', isThisCourse: false, reserved: '3' })
-  const mine = wishOptions({ ...group, wish: { 1: '563038', 2: '0', 3: '0', 4: '0', 5: '0' } }, peRecord)
-  assert.equal(mine[0].isThisCourse, true)
+  assert.deepEqual(options[0], { no: 1, used: true, isCurrent: false, registered: '12' })
+  assert.deepEqual(options[1], { no: 2, used: false, isCurrent: false, registered: '3' })
+  const mine = wishOptions(group, peRecord, { current: 1 })
+  assert.equal(mine[0].isCurrent, true)
+  assert.equal(mine[0].used, false)
 })
 
 test('沒有群組資料時沒有志願可選', () => {
@@ -304,4 +306,65 @@ test('resolveRegInfo 預排自帶路徑時只查一次，不猜其他路徑', as
   assert.equal(asked[0].category_type, 'CAT')
   assert.equal(result.ok, true)
   assert.equal(result.record, null)
+})
+
+// 2026-09-20 實測（docs/cos-api-behavior-2026-09-20.md §3、§10、§20）：
+// getCosCategoryWish 的 wish[n] 是「這個志願已經被幾門課用掉」的數量，不是課號；
+// wish.F 是這個群組已經選上幾門，超過 cos_limit 就不能再登記（選課網顯示「已達上限」）。
+test('wishOptions 依照選課網的規則列出志願序', async () => {
+  const { wishOptions } = await import('../src/lib/register.js')
+  const group = { wish_limit: '6', cos_limit: '1', wish: { 1: '1', 2: '0', 3: '0', 4: '0', 5: '0', 6: '0', F: '0' } }
+  const record = { cos_id: '561068', first_wish_reserved_num: '12', second_wish_reserved_num: '3' }
+  const options = wishOptions(group, record)
+  assert.equal(options.length, 6)
+  // 第 1 志願已經被這個群組裡的某門課用掉 → 不能再選
+  assert.deepEqual(options[0], { no: 1, used: true, isCurrent: false, registered: '12' })
+  assert.deepEqual(options[1], { no: 2, used: false, isCurrent: false, registered: '3' })
+  // 第 6 志願沒有對應的人數欄位（伺服器只給五個）
+  assert.deepEqual(options[5], { no: 6, used: false, isCurrent: false, registered: '' })
+})
+
+test('wishOptions 標出這門課目前登記的志願，而且它不算被佔用', async () => {
+  const { wishOptions } = await import('../src/lib/register.js')
+  const group = { wish_limit: '5', cos_limit: '1', wish: { 1: '0', 2: '1', 3: '0', 4: '0', 5: '0', F: '0' } }
+  const options = wishOptions(group, {}, { current: 2 })
+  assert.equal(options[1].isCurrent, true)
+  assert.equal(options[1].used, false, '自己現在填的志願要能重選')
+})
+
+test('wishLimitReached：群組已選滿就不能再登記', async () => {
+  const { wishLimitReached } = await import('../src/lib/register.js')
+  assert.equal(wishLimitReached({ cos_limit: '1', wish: { F: '0' } }), false)
+  assert.equal(wishLimitReached({ cos_limit: '1', wish: { F: '1' } }), false, '等於上限時選課網仍然顯示志願選單')
+  assert.equal(wishLimitReached({ cos_limit: '1', wish: { F: '2' } }), true)
+  assert.equal(wishLimitReached({ cos_limit: '100', wish: { F: '3' } }), false)
+  assert.equal(wishLimitReached(null), false)
+})
+
+// blocked 幾乎永遠是 '1'（實測 8 門課全部如此，包含可以選的），不能拿來判斷
+test('describeAvailability 不再用 blocked 判斷是否開放', async () => {
+  const { describeAvailability } = await import('../src/lib/register.js')
+  const a = describeAvailability({ cos_id: '1', status: 'success', blocked: '1', num_limit: '70', registered_num: '10', conflict_num: '0' })
+  assert.equal(a.canRegister, true)
+  assert.deepEqual(a.reasons, [])
+  const b = describeAvailability({ cos_id: '1', status: 'error', cmsg: '未開放，如有疑問請洽「主開單位」助理。', blocked: '1', num_limit: '70', registered_num: '70', conflict_num: '0' })
+  assert.equal(b.message, '未開放，如有疑問請洽「主開單位」助理。')
+  assert.ok(!b.reasons.includes('目前不開放加選'), 'blocked 不是判斷依據')
+})
+
+// 實測：wType 填錯或留空 → 志願群組會消失；cos_type_code 留空 → 被當成必修。
+// 這些欄位一定要照查詢結果送，送不出去就不要送。
+test('registerParams 缺少採計欄位時拒絕送出', async () => {
+  const { registerParams } = await import('../src/lib/register.js')
+  assert.throws(() => registerParams({ cos_id: '1', cos_type_code: '', wType: 'X', num_limit: '70' }), /修課別/)
+  assert.throws(() => registerParams({ cos_id: '1', cos_type_code: '2', wType: '', num_limit: '70' }), /修課別|類別/)
+})
+
+test('registerParams 對志願群組課程要求合法志願序', async () => {
+  const { registerParams } = await import('../src/lib/register.js')
+  const record = { cos_id: '561068', cos_type_code: 'E', wType: 'E', GroupUID: 'G', num_limit: '70', category_type: 'CAT' }
+  assert.throws(() => registerParams(record, ''), /志願/)
+  assert.throws(() => registerParams(record, '0'), /志願/)
+  assert.throws(() => registerParams(record, 'F'), /志願/)
+  assert.equal(registerParams(record, 3).wish, '3')
 })

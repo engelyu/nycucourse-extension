@@ -20,3 +20,5 @@
 .reg-dialog .dialog-error { color: #c62828; font-size: 13px; margin: 10px 0 0; }
 .reg-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .reg-dialog button { font: inherit; padding: 4px 12px; cursor: pointer; }
+#wish-options label.taken { opacity: .5; }
+#wish-options .wish-full { margin: 4px 0; color: var(--error, #c62828); }
