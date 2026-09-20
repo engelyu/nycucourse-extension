@@ -83,6 +83,16 @@
     return post('setregist', { cos_id: cosId, ...params })
   }
 
+  // 把課號從預排徹底移除：選課網理論上一個課號只會有一筆，但實驗留下殘留就會讓還原檢查失敗
+  async function ensureAbsentFromPrereg(cosId) {
+    for (let i = 0; i < 5; i++) {
+      const rows = (await post('getpreregist')).json || []
+      if (!rows.some((c) => String(c.cos_id) === String(cosId))) return true
+      await post('deletepreregist', { cos_id: cosId })
+    }
+    return false
+  }
+
   // ---------- 實驗組 ----------
   // 每一組：{ id, writes, run(ctx) }。ctx 提供 post/record/safe* 與挑好的測試課程。
   const groups = []
@@ -171,15 +181,12 @@
         // 順便確認選課網自己查不查得到
         const look = await reginfo(String(params.cos_id), menuOf(stored), stored.category_type || '')
         state.results[state.results.length - 1].cos查得到 = look.rec ? look.rec.status : 'EMPTY'
-        await post('deletepreregist', { cos_id: params.cos_id })
+        await ensureAbsentFromPrereg(String(params.cos_id))
       }
     }
-    record('setpreregist', '重複加入', '同一課號加入兩次', { cos_id: id }, await (async () => {
-      await post('setpreregist', base)
-      const dup = await post('setpreregist', base)
-      await post('deletepreregist', { cos_id: id })
-      return dup
-    })())
+    await post('setpreregist', base)
+    record('setpreregist', '重複加入', '同一課號加入兩次', { cos_id: id }, await post('setpreregist', base))
+    await ensureAbsentFromPrereg(id)
   })
 
   add('deletepreregist', true, async (ctx) => {
@@ -352,7 +359,10 @@
     return ctx
   }
 
-  async function run({ writes = false, only = null } = {}) {
+  // ctx 可以重複使用：挑測試課程要掃整份預排，很慢，分批跑時先 prepare() 一次再傳進來
+  async function prepare() { return pickCourses() }
+
+  async function run({ writes = false, only = null, ctx: given = null } = {}) {
     const startedAt = new Date().toISOString()
     state.results = []
     const before = await lists()
@@ -360,7 +370,7 @@
     if (before.registered.some((c) => String(c.sFlag) !== 'F')) {
       console.warn('注意：目前有「已登記」的課，實驗結束的比對會把它們算進去。')
     }
-    const ctx = await pickCourses()
+    const ctx = given || (await pickCourses())
     console.log('測試課程：', ctx)
     for (const g of groups) {
       if (only && !only.includes(g.id)) continue
@@ -387,6 +397,13 @@
   const dump = () => JSON.stringify({ meta: state.meta, results: state.results }, null, 1)
   const summary = () => state.results.map((r) => ({ g: r.group, id: r.id, ms: r.ms, reply: r.reply, ...(r.sFlag !== undefined ? { sFlag: r.sFlag } : {}), ...(r.存成 ? { 存成: r.存成 } : {}), ...(r.cos查得到 ? { cos查得到: r.cos查得到 } : {}) }))
 
-  window.cosProbe = { run, dump, summary, get results() { return state.results }, get meta() { return state.meta }, post, groups: groups.map((g) => g.id) }
+  window.cosProbe = {
+    run, prepare, dump, summary, post, add, record,
+    safeRegister, safeCancel, reginfo, menuOf, menuParams, lists, regRecord, sleep, shape,
+    get results() { return state.results },
+    get meta() { return state.meta },
+    get state() { return state },
+    groups: groups.map((g) => g.id),
+  }
   console.log('cosProbe 已載入。實驗組：', groups.map((g) => g.id).join(', '))
 })()
