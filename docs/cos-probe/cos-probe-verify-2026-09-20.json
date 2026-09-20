@@ -1,0 +1,1138 @@
+{
+ "meta": {
+  "startedAt": "2026-09-20T05:25:35.670Z",
+  "finishedAt": "2026-09-20T05:26:17.843Z",
+  "writes": true,
+  "ctx": {
+   "blocked": {
+    "cos_id": "563038",
+    "menu": {
+     "type": 3,
+     "dep_category": "0G",
+     "college_no": "*",
+     "dep_uid": "8077C844-67A2-450B-B39A-A6CC7DE5C114",
+     "group": "",
+     "grade": "",
+     "class": ""
+    },
+    "cos_type_code": "1",
+    "wType": "2",
+    "category_type": "",
+    "num_limit": "36",
+    "GroupUID": "5E1EBC49-8FA6-4F9B-AAFD-ED10C449F291",
+    "name": "體育－羽球甲A"
+   },
+   "group": {
+    "cos_id": "515008",
+    "menu": {
+     "type": 3,
+     "dep_category": "0C",
+     "college_no": "*",
+     "dep_uid": "75F46684-4732-47B1-8894-E22C9FA6C5A2",
+     "group": "計算機概論與程式設計",
+     "grade": "",
+     "class": ""
+    },
+    "cos_type_code": "1",
+    "wType": "5",
+    "category_type": "",
+    "num_limit": "60",
+    "GroupUID": "8E030471-B2CC-4800-A7FC-2EF6F8376DB9",
+    "name": "計算機概論與程式設計",
+    "wish_limit": "6",
+    "cos_limit": "1"
+   },
+   "groupPair": [
+    {
+     "cos_id": "515518",
+     "menu": {
+      "type": 3,
+      "dep_category": "0C",
+      "college_no": "*",
+      "dep_uid": "3FDEE98E-1A4F-4DE3-847B-ED0061569CC8",
+      "group": "機器學習概論",
+      "grade": "",
+      "class": ""
+     },
+     "cos_type_code": "2",
+     "wType": "5",
+     "category_type": "",
+     "num_limit": "110",
+     "GroupUID": "5DC6E2AE-7E0F-491E-8B32-F8DFB918A8AA",
+     "name": "機器學習概論",
+     "wish_limit": "6",
+     "cos_limit": "1"
+    },
+    {
+     "cos_id": "515519",
+     "menu": {
+      "type": 3,
+      "dep_category": "0C",
+      "college_no": "*",
+      "dep_uid": "3FDEE98E-1A4F-4DE3-847B-ED0061569CC8",
+      "group": "機器學習概論",
+      "grade": "",
+      "class": ""
+     },
+     "cos_type_code": "2",
+     "wType": "5",
+     "category_type": "",
+     "num_limit": "90",
+     "GroupUID": "5DC6E2AE-7E0F-491E-8B32-F8DFB918A8AA",
+     "name": "機器學習概論",
+     "wish_limit": "6",
+     "cos_limit": "1"
+    }
+   ],
+   "core": {
+    "cos_id": "534000",
+    "menu": {
+     "type": 3,
+     "dep_category": "0G",
+     "college_no": "*",
+     "dep_uid": "A91F7169-A56F-4612-85DE-2AC40893212C",
+     "group": "Z10[0-4]",
+     "grade": "",
+     "class": ""
+    },
+    "cos_type_code": "E",
+    "wType": "E",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3",
+    "num_limit": "50",
+    "GroupUID": "51CE2C18-B68C-4F72-8E6B-51DCA1DE0B04",
+    "name": "初等應用統計",
+    "wish_limit": "6",
+    "cos_limit": "100"
+   },
+   "capped": {
+    "cos_id": "111507",
+    "menu": {
+     "type": 1,
+     "dep_category": "3*",
+     "college_no": 2,
+     "dep_uid": "A5E1FDEB-14BC-473B-A0DA-E80A977D2998",
+     "group": "*",
+     "grade": "*",
+     "class": "*"
+    },
+    "cos_type_code": "1",
+    "wType": "X",
+    "category_type": "",
+    "num_limit": "10",
+    "GroupUID": null,
+    "name": "導師時間(三)"
+   },
+   "deptMenu": {
+    "type": "1",
+    "dep_category": "3*",
+    "college_no": "S",
+    "dep_uid": "A0C3EB6F-4D5A-440D-9634-EB826A8587E5",
+    "group": "*",
+    "grade": "*",
+    "class": "*"
+   },
+   "spare": {
+    "cos_id": "516702",
+    "menu": {
+     "type": "1",
+     "dep_category": "3*",
+     "college_no": "S",
+     "dep_uid": "A0C3EB6F-4D5A-440D-9634-EB826A8587E5",
+     "group": "*",
+     "grade": "*",
+     "class": "*"
+    },
+    "name": "服務學習(一)"
+   },
+   "scanned": 22
+  },
+  "restored": {
+   "預排相同": true,
+   "正式選課相同": true,
+   "全部已選上": true
+  },
+  "預排筆數": 54,
+  "正式選課筆數": 9,
+  "說明": "2026-09-20 用 tools/cos-probe.js（commit 後的版本）對真實帳號跑的驗證：唯讀 38 筆另存，寫入實驗分兩批共 40 筆",
+  "批次": [
+   "setpreregist+deletepreregist+setregist-wish",
+   "setregist-attribution+setregist-errors+group-rules+deleteregist+wish-table"
+  ]
+ },
+ "results": [
+  {
+   "stored": {
+    "menu": "{&quot;type&quot;:&quot;1&quot;,&quot;dep_category&quot;:&quot;3*&quot;,&quot;college_no&quot;:&quot;S&quot;,&quot;dep_uid&quot;:&quot;A0C3EB6F-4D5A-440D-9634-EB826A8587E5&quot;,&quot;group&quot;:&quot;*&quot;,&quot;grade&quot;:&quot;*&quot;,&quot;class&quot;:&quot;*&quot;}",
+    "wType": "X",
+    "type": "1",
+    "cat": ""
+   },
+   "group": "setpreregist",
+   "id": "正確",
+   "desc": "加入預排 正確",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 126,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 23
+    }
+   },
+   "cos查得到": "error"
+  },
+  {
+   "stored": {
+    "menu": "{}",
+    "wType": "X",
+    "type": "1",
+    "cat": ""
+   },
+   "group": "setpreregist",
+   "id": "空選單",
+   "desc": "加入預排 空選單",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{}",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 208,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 23
+    }
+   },
+   "cos查得到": "EMPTY"
+  },
+  {
+   "stored": {
+    "menu": "{&quot;type&quot;:9,&quot;dep_category&quot;:&quot;ZZ&quot;,&quot;college_no&quot;:&quot;Q&quot;,&quot;dep_uid&quot;:&quot;00000000-0000-0000-0000-000000000000&quot;,&quot;group&quot;:&quot;*&quot;,&quot;grade&quot;:&quot;*&quot;,&quot;class&quot;:&quot;*&quot;}",
+    "wType": "X",
+    "type": "1",
+    "cat": ""
+   },
+   "group": "setpreregist",
+   "id": "選單亂填",
+   "desc": "加入預排 選單亂填",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":9,\"dep_category\":\"ZZ\",\"college_no\":\"Q\",\"dep_uid\":\"00000000-0000-0000-0000-000000000000\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 45,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 23
+    }
+   },
+   "cos查得到": "EMPTY"
+  },
+  {
+   "stored": {
+    "menu": "not-json",
+    "wType": "X",
+    "type": "1",
+    "cat": ""
+   },
+   "group": "setpreregist",
+   "id": "選單不是JSON",
+   "desc": "加入預排 選單不是JSON",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "not-json",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 49,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 23
+    }
+   },
+   "cos查得到": "EMPTY"
+  },
+  {
+   "group": "setpreregist",
+   "id": "少欄位",
+   "desc": "加入預排 少欄位",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}"
+   },
+   "ms": 22,
+   "reply": {
+    "http": 200,
+    "keys": [
+     "status",
+     "msg"
+    ],
+    "n": 2,
+    "status": "error"
+   }
+  },
+  {
+   "stored": {
+    "menu": "{&quot;type&quot;:&quot;1&quot;,&quot;dep_category&quot;:&quot;3*&quot;,&quot;college_no&quot;:&quot;S&quot;,&quot;dep_uid&quot;:&quot;A0C3EB6F-4D5A-440D-9634-EB826A8587E5&quot;,&quot;group&quot;:&quot;*&quot;,&quot;grade&quot;:&quot;*&quot;,&quot;class&quot;:&quot;*&quot;}",
+    "wType": "X",
+    "type": "1",
+    "cat": ""
+   },
+   "group": "setpreregist",
+   "id": "wType空",
+   "desc": "加入預排 wType空",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 53,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 23
+    }
+   },
+   "cos查得到": "error"
+  },
+  {
+   "group": "setpreregist",
+   "id": "wType亂填",
+   "desc": "加入預排 wType亂填",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "ZZ",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 46,
+   "reply": {
+    "http": 200,
+    "keys": [
+     "status",
+     "msg"
+    ],
+    "n": 2,
+    "status": "error"
+   }
+  },
+  {
+   "stored": {
+    "menu": "{&quot;type&quot;:&quot;1&quot;,&quot;dep_category&quot;:&quot;3*&quot;,&quot;college_no&quot;:&quot;S&quot;,&quot;dep_uid&quot;:&quot;A0C3EB6F-4D5A-440D-9634-EB826A8587E5&quot;,&quot;group&quot;:&quot;*&quot;,&quot;grade&quot;:&quot;*&quot;,&quot;class&quot;:&quot;*&quot;}",
+    "wType": "X",
+    "type": "1",
+    "cat": "NOT-A-REAL-CATEGORY"
+   },
+   "group": "setpreregist",
+   "id": "類別亂填",
+   "desc": "加入預排 類別亂填",
+   "params": {
+    "cos_id": "516702",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "NOT-A-REAL-CATEGORY",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 53,
+   "reply": {
+    "http": 200,
+    "notJson": "(空回應)"
+   },
+   "cos查得到": "error"
+  },
+  {
+   "group": "setpreregist",
+   "id": "不存在的課號",
+   "desc": "加入預排 不存在的課號",
+   "params": {
+    "cos_id": "999999",
+    "menu_data": "{\"type\":\"1\",\"dep_category\":\"3*\",\"college_no\":\"S\",\"dep_uid\":\"A0C3EB6F-4D5A-440D-9634-EB826A8587E5\",\"group\":\"*\",\"grade\":\"*\",\"class\":\"*\"}",
+    "wType": "X",
+    "GroupName": "null",
+    "GroupName_E": "null",
+    "category_type": "",
+    "category_cname": "null",
+    "category_ename": "null"
+   },
+   "ms": 49,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "msg": "選課預選失敗",
+     "keys": 2
+    }
+   }
+  },
+  {
+   "group": "setpreregist",
+   "id": "重複加入",
+   "desc": "同一課號加入兩次",
+   "params": {
+    "cos_id": "516702"
+   },
+   "ms": 48,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "msg": "重複預選",
+     "keys": 2
+    }
+   }
+  },
+  {
+   "group": "deletepreregist",
+   "id": "不存在",
+   "desc": "刪除沒有加過的課號",
+   "params": {
+    "cos_id": "999999"
+   },
+   "ms": 45,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "msg": "無此選課預選資料",
+     "keys": 2
+    }
+   }
+  },
+  {
+   "group": "deletepreregist",
+   "id": "空課號",
+   "desc": "課號留空",
+   "params": {
+    "cos_id": ""
+   },
+   "ms": 46,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "msg": "無此選課預選資料",
+     "keys": 2
+    }
+   }
+  },
+  {
+   "group": "deletepreregist",
+   "id": "正常",
+   "desc": "刪除剛加入的課",
+   "params": {
+    "cos_id": "516702"
+   },
+   "ms": 50,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "msg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "group": "setregist-wish",
+   "id": "無群組wish=1",
+   "desc": "有上限無群組 wish=1",
+   "params": {
+    "cos_id": "111507",
+    "wish": "1"
+   },
+   "ms": 406,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "group": "setregist-wish",
+   "id": "無群組wish=空",
+   "desc": "有上限無群組 wish=(空)",
+   "params": {
+    "cos_id": "111507",
+    "wish": ""
+   },
+   "ms": 569,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "group": "setregist-wish",
+   "id": "無群組wish=0",
+   "desc": "有上限無群組 wish=0",
+   "params": {
+    "cos_id": "111507",
+    "wish": "0"
+   },
+   "ms": 760,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "group": "setregist-wish",
+   "id": "無群組wish=9",
+   "desc": "有上限無群組 wish=9",
+   "params": {
+    "cos_id": "111507",
+    "wish": "9"
+   },
+   "ms": 696,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "group": "setregist-wish",
+   "id": "無群組wish=X",
+   "desc": "有上限無群組 wish=X",
+   "params": {
+    "cos_id": "111507",
+    "wish": "X"
+   },
+   "ms": 685,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"1\"",
+   "groupUid": "8E030471-B2CC-4800-A7FC-2EF6F8376DB9",
+   "group": "setregist-wish",
+   "id": "群組wish=1",
+   "desc": "志願群組 wish=1",
+   "params": {
+    "cos_id": "515008",
+    "wish": "1"
+   },
+   "ms": 615,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\"6\"",
+   "groupUid": "8E030471-B2CC-4800-A7FC-2EF6F8376DB9",
+   "group": "setregist-wish",
+   "id": "群組wish=6",
+   "desc": "志願群組 wish=6",
+   "params": {
+    "cos_id": "515008",
+    "wish": "6"
+   },
+   "ms": 382,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": null,
+   "groupUid": null,
+   "group": "setregist-wish",
+   "id": "群組wish=7",
+   "desc": "志願群組 wish=7",
+   "params": {
+    "cos_id": "515008",
+    "wish": "7"
+   },
+   "ms": 340,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "志願登記超過規定數量(wrong option)",
+     "errortype": "wish",
+     "keys": 7
+    }
+   }
+  },
+  {
+   "sFlag": "\"0\"",
+   "groupUid": "8E030471-B2CC-4800-A7FC-2EF6F8376DB9",
+   "group": "setregist-wish",
+   "id": "群組wish=0",
+   "desc": "志願群組 wish=0",
+   "params": {
+    "cos_id": "515008",
+    "wish": "0"
+   },
+   "ms": 747,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "sFlag": "\" \"",
+   "groupUid": "8E030471-B2CC-4800-A7FC-2EF6F8376DB9",
+   "group": "setregist-wish",
+   "id": "群組wish=空",
+   "desc": "志願群組 wish=(空)",
+   "params": {
+    "cos_id": "515008",
+    "wish": ""
+   },
+   "ms": 417,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "E",
+    "wtype": "E",
+    "groupUid": "51CE2C18-B68C-4F72-8E6B-51DCA1DE0B04",
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "照查詢結果",
+   "desc": "登記時 照查詢結果",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "E",
+    "wType": "E",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3"
+   },
+   "ms": 505,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "E",
+    "wtype": "E",
+    "groupUid": "6D27BD78-DF06-40B8-8A68-DC75337F96EB",
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "類別留空",
+   "desc": "登記時 類別留空",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "E",
+    "wType": "E",
+    "category_type": ""
+   },
+   "ms": 1212,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": null,
+   "group": "setregist-attribution",
+   "id": "類別亂填",
+   "desc": "登記時 類別亂填",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "E",
+    "wType": "E",
+    "category_type": "NOT-A-REAL-CATEGORY"
+   },
+   "ms": 520,
+   "reply": {
+    "http": 200,
+    "keys": [
+     "status",
+     "msg"
+    ],
+    "n": 2,
+    "status": "error"
+   }
+  },
+  {
+   "存成": {
+    "type": "2",
+    "wtype": "X",
+    "groupUid": null,
+    "brief": "",
+    "briefName": null
+   },
+   "group": "setregist-attribution",
+   "id": "當成選修",
+   "desc": "登記時 當成選修",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "2",
+    "wType": "X",
+    "category_type": ""
+   },
+   "ms": 840,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "E",
+    "wtype": "X",
+    "groupUid": null,
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "wType亂填",
+   "desc": "登記時 wType亂填",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "E",
+    "wType": "9",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3"
+   },
+   "ms": 1313,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "E",
+    "wtype": "X",
+    "groupUid": null,
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "wType空",
+   "desc": "登記時 wType空",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "E",
+    "wType": "",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3"
+   },
+   "ms": 686,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "Z",
+    "wtype": "E",
+    "groupUid": "51CE2C18-B68C-4F72-8E6B-51DCA1DE0B04",
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "修課別亂填",
+   "desc": "登記時 修課別亂填",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "Z",
+    "wType": "E",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3"
+   },
+   "ms": 850,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "存成": {
+    "type": "1",
+    "wtype": "E",
+    "groupUid": "51CE2C18-B68C-4F72-8E6B-51DCA1DE0B04",
+    "brief": "Z102",
+    "briefName": "基本素養-量性推理"
+   },
+   "group": "setregist-attribution",
+   "id": "修課別空",
+   "desc": "登記時 修課別空",
+   "params": {
+    "cos_id": "534000",
+    "cos_type_code": "",
+    "wType": "E",
+    "category_type": "DF91BC7C-CB39-457C-AD17-8328309819B3"
+   },
+   "ms": 553,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "group": "setregist-errors",
+   "id": "不存在的課號",
+   "desc": "登記不存在的課號",
+   "params": {
+    "cos_id": "999999"
+   },
+   "ms": 563,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "無權限加選，課號(999999)",
+     "errortype": "nopriority",
+     "keys": 7
+    }
+   }
+  },
+  {
+   "group": "setregist-errors",
+   "id": "未開放",
+   "desc": "登記查詢結果 status error 的課",
+   "params": {
+    "cos_id": "563038"
+   },
+   "ms": 474,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "該類課程加選數量超過規定(Exceed the upper limit)",
+     "errortype": "wish",
+     "keys": 7
+    }
+   }
+  },
+  {
+   "第一次": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   },
+   "group": "setregist-errors",
+   "id": "重複登記",
+   "desc": "已登記的課再送一次",
+   "params": {
+    "cos_id": "111507"
+   },
+   "ms": 711,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "重複選課",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "group": "group-rules",
+   "id": "不同志願_cos_limit1",
+   "desc": "第二門課用志願 2",
+   "params": {
+    "cos_id": "515519"
+   },
+   "ms": 608,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "success",
+     "cmsg": "",
+     "keys": 6
+    }
+   }
+  },
+  {
+   "group": "group-rules",
+   "id": "重複志願_cos_limit1",
+   "desc": "第二門課用同一個志願 1",
+   "params": {
+    "cos_id": "515519"
+   },
+   "ms": 771,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "重複登記志願(option to repeat)",
+     "errortype": "wish",
+     "keys": 7
+    }
+   }
+  },
+  {
+   "group": "deleteregist",
+   "id": "沒登記的課",
+   "desc": "取消沒有登記的課",
+   "params": {
+    "cos_id": "111507"
+   },
+   "ms": 421,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "無此選課資料",
+     "keys": 3
+    }
+   }
+  },
+  {
+   "group": "deleteregist",
+   "id": "空課號",
+   "desc": "課號留空（確認不會變成整批刪除）",
+   "params": {
+    "cos_id": ""
+   },
+   "ms": 495,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "無此選課資料",
+     "keys": 3
+    }
+   }
+  },
+  {
+   "group": "deleteregist",
+   "id": "不存在課號",
+   "desc": "不存在的課號",
+   "params": {
+    "cos_id": "999999"
+   },
+   "ms": 568,
+   "reply": {
+    "http": 200,
+    "array": 1,
+    "first": {
+     "status": "error",
+     "cmsg": "無此選課資料",
+     "keys": 3
+    }
+   }
+  },
+  {
+   "before": {
+    "wish": {
+     "1": "0",
+     "2": "0",
+     "3": "0",
+     "4": "0",
+     "5": "0",
+     "6": "0",
+     "F": "0"
+    },
+    "wish_limit": "6",
+    "cos_limit": "1"
+   },
+   "immediately": {
+    "wish": {
+     "1": "0",
+     "2": "0",
+     "3": "0",
+     "4": "0",
+     "5": "0",
+     "6": "0",
+     "F": "0"
+    },
+    "wish_limit": "6",
+    "cos_limit": "1"
+   },
+   "after3s": {
+    "wish": {
+     "1": "0",
+     "2": "0",
+     "3": "0",
+     "4": "1",
+     "5": "0",
+     "6": "0",
+     "F": "0"
+    },
+    "wish_limit": "6",
+    "cos_limit": "1"
+   },
+   "afterCancel": {
+    "wish": {
+     "1": "0",
+     "2": "0",
+     "3": "0",
+     "4": "1",
+     "5": "0",
+     "6": "0",
+     "F": "0"
+    },
+    "wish_limit": "6",
+    "cos_limit": "1"
+   },
+   "group": "wish-table",
+   "id": "更新時機",
+   "desc": "登記第 4 志願前後讀志願表",
+   "params": {
+    "cos_id": "515008"
+   },
+   "ms": 0,
+   "reply": {
+    "http": 200,
+    "keys": [],
+    "n": 0
+   }
+  }
+ ]
+}
