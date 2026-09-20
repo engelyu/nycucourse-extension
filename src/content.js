@@ -377,5 +377,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     )
     return true
   }
+  // 不認得的訊息（例如舊分頁收到新版頁面送來的訊息）也要回應，呼叫端才能提示重新整理分頁
+  sendResponse({ ok: false, reason: 'unknown_message' })
   return false
 })
