@@ -175,7 +175,16 @@ async function runAutoRegister(trigger = 'alarm') {
       results.push({ ...item, ok: false, message: availability.message || '選課網不允許登記' })
       continue
     }
-    const sent = await askTab(tab.id, { type: 'register', params: registerParams(record, item.wish) })
+    // registerParams 會在缺採計欄位或志願序不合法時丟例外（報告 §20.6、§25）：
+    // 那一門標成失敗就好，不能讓整批自動登記中斷
+    let params
+    try {
+      params = registerParams(record, item.wish)
+    } catch (err) {
+      results.push({ ...item, ok: false, message: (err && err.message) || '缺少登記資料' })
+      continue
+    }
+    const sent = await askTab(tab.id, { type: 'register', params })
     const parsed = sent && sent.ok ? parseRegResult(sent.text) : { ok: false, message: '送出失敗' }
     results.push({ ...item, ok: parsed.ok, message: parsed.ok && item.wish ? `已登記第 ${item.wish} 志願` : parsed.message })
     await sleep(STEP_DELAY_MS)

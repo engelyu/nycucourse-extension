@@ -101,3 +101,27 @@ test('summarizeResults 產生可讀的結果', () => {
   assert.equal(text, '成功 1 門、失敗 1 門：生死學 成功；體育 人數已滿')
   assert.equal(summarizeResults([]), '沒有需要登記的課程')
 })
+
+// 2026-09-20：registerParams 現在會在資料不全時丟例外，自動登記必須把那一門標成失敗、繼續跑下去
+test('registerParams 丟例外時只有那一門失敗', async () => {
+  const { registerParams } = await import('../src/lib/register.js')
+  const items = [
+    { cosId: '516713', wish: '', title: '有上限無群組' },
+    { cosId: '561068', wish: '', title: '志願群組課' },
+  ]
+  const records = {
+    516713: { cos_id: '516713', cos_type_code: '2', wType: 'X', num_limit: '40', GroupUID: null },
+    561068: { cos_id: '561068', cos_type_code: 'E', wType: 'E', num_limit: '70', GroupUID: 'G' },
+  }
+  const results = []
+  for (const item of items) {
+    try {
+      results.push({ cosId: item.cosId, ok: true, wish: registerParams(records[item.cosId], item.wish).wish })
+    } catch (err) {
+      results.push({ cosId: item.cosId, ok: false, message: err.message })
+    }
+  }
+  assert.deepEqual(results[0], { cosId: '516713', ok: true, wish: '1' }, '一般課程伺服器自己決定志願，照送')
+  assert.equal(results[1].ok, false)
+  assert.match(results[1].message, /志願/)
+})
