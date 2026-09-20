@@ -205,3 +205,123 @@ API 沒有提供分發演算法。`getregistrationcourselist` 會回 `first_wish
 | E17 | 已登記的課從預排移除 | 登記不受影響 |
 | E18 | 平行 vs 循序、最終狀態 | 平行快 3–12 倍；狀態完全回復 |
 | E19 | 未開放、額滿、他系課程 | 權限會擋（`nopriority`），額滿不擋 |
+
+---
+
+# 第二輪實測（同日稍晚）
+
+第一輪之後再做了一輪，補上錯誤類型、志願序邊界、學分上限、衝堂定義、群組配額。結束時狀態同樣回復原狀（9 門已選上、21 學分、預排 54 筆）。
+
+## 8. 完整 API 端點清單
+
+從選課網自己的程式碼（app.726803a7.js）取出，共 21 個，全部是 POST、同源、帶 `Authorization: Bearer <localStorage.token>`：
+
+| 用途 | 端點 |
+|---|---|
+| 系統狀態 | `sysstatuslvl`（負載指標，不是開關）、`checkreg`、`checkdistribute` |
+| 身分 | `userinfo` |
+| 選單與課程 | `getdep`、`preregistcourse` |
+| 預排 | `getpreregist`、`setpreregist`、`deletepreregist` |
+| 正式選課 | `getregist`、`getsemregist`、`getregistrationcourselist`、`setregist`、`deleteregist`、`getCosCategoryWish` |
+| 教學意見調查 | `getquesttime`、`getquestlist`、`getquestiondata`、`setAnswers` |
+| 登入 OTP | `setotp`、`checkotp` |
+
+`getsemregist` 需要 `acy`／`sem`，可以查歷史學期（實測帳號是大一，上學期回傳 0 筆）。
+
+## 9. 伺服器的錯誤類型（errortype）
+
+| 情況 | 回應 |
+|---|---|
+| 沒有權限、未開放、課號不存在 | `{status:'error', errortype:'nopriority', cmsg:'無權限加選，課號(…)'}` |
+| 志願序超出範圍（群組課送 wish=9，上限 6） | `{status:'error', errortype:'wish', cmsg:'志願登記超過規定數量(wrong option)'}` |
+| 該群組已選滿（`wish.F > cos_limit`） | `{status:'error', errortype:'wish', cmsg:'該類課程加選數量超過規定(Exceed the upper limit)'}` |
+| 同群組重複用同一個志願序（部分群組） | `{status:'error', errortype:'wish', cmsg:'重複登記志願(option to repeat)'}` |
+| 已經登記過同一門課 | `{status:'error', cmsg:'重複選課'}`（沒有 errortype） |
+| 取消沒登記的課 | `{status:'error', cmsg:'無此選課資料'}` |
+| 預排重複加入 | `{status:'error', msg:'重複預選'}` |
+| 預排加入不存在的課號 | `{status:'error', msg:'選課預選失敗'}` |
+| 刪除不存在的預排 | `{status:'error', msg:'無此選課預選資料'}` |
+
+注意「課號不存在」和「沒有權限」回應完全相同，程式無法分辨。
+
+## 10. 志願序：三條伺服器規則、一條只有前端擋
+
+| 規則 | 伺服器 | 實測 |
+|---|---|---|
+| 志願序必須在 1..`wish_limit` | **擋**（errortype wish） | 送 wish=9 被拒 |
+| 群組已選滿（`wish.F > cos_limit`）不能再登記 | **擋** | 微積分群組（已選上 2 門、cos_limit 1）被拒 |
+| 同群組不能重複用同一志願序 | **只有部分群組擋** | 學院共同（cos_limit=1）擋；核心課程（cos_limit=100）**不擋**，兩門課都停在第 5 志願 |
+| 志願序送空字串或 0 | **完全不擋** | 見下 |
+
+### ⚠️ 最危險的一條：空志願與志願 0
+
+- 群組課送 `wish: ''` → **登記成功**，`sFlag` 存成 `" "`（一個空白字元）。
+- 群組課送 `wish: '0'` → **登記成功**，`sFlag` 存成 `"0"`。
+
+兩種都是選課網自己的畫面絕對不會產生的狀態，使用者在「已登記」清單裡也看不出異常，但分發時幾乎不可能選上。**我們的程式對有志願群組的課，必須強制使用者選 1..wish_limit 的值，絕不能送空值或預設值。**
+
+## 11. 衝堂（conflict_num）只算「已選上」
+
+實測：登記一門與 536712 同時段（T7）的課之後，536712 的 `conflict_num` 仍然是 3，沒有增加；取消後也一樣。
+
+也就是 `conflict_num` 只計算 `sFlag='F'` 的課。我們自己的課表要標示「和已登記的課衝堂」的話，得自己算，選課網不會幫忙。
+
+搭配第 2.4 節：衝堂只有在「不限人數」的課（即選即上）才會被伺服器擋；有上限的課照樣可以登記。
+
+## 12. 登記階段沒有學分上限
+
+實測帳號已選上 21 學分，逐步登記到 **39 學分**（6 門測試課），伺服器完全沒有抱怨。
+
+所以學分上限是在分發或系辦端處理，登記階段不會擋。**匯出功能不能假設伺服器會保護使用者**，要自己算學分並提醒。
+
+## 13. 換採計方式的正確程序
+
+同一門課想改採計方式（例如核心改成選修）：
+
+1. 直接重送 `setregist` → `重複選課`，失敗。
+2. 必須 `deleteregist` 取消，再用新的 `cos_type_code`／`wType`／`category_type` 重新 `setregist`。
+
+實測 534000：以核心登記 → 紀錄是 `cos_type_code E`、群組 `51CE2C18`；取消後以選修登記 → 紀錄變成 `cos_type_code 2`、**沒有群組**。
+
+改志願也是同一套程序（取消再登記）。
+
+## 14. getCosCategoryWish 是「最終一致」，不能馬上信
+
+實測：登記第 2 志願後立刻讀，志願表還是全 0；取消之後那一筆才出現；再過幾秒才清掉。
+
+所以：**寫入之後不要立刻用這張表判斷志願序有沒有被佔用**，要隔幾秒重讀，或以 `getregist` 的實際 `sFlag` 為準。`getregist` 是即時的。
+
+## 15. preregistcourse 的 codition 只吃課號
+
+實測：`codition='516703'` 回 1 筆；`'分析導論'`、`'Analysis'`、`'T34'` 都回 0 筆。課名搜尋要自己在本機做。
+
+## 16. userinfo 就是「使用者自己的選單」
+
+回傳 `type / dep_category / college_no / dep_uid / class / grade / group / degree / campus / enter_year / lastacysem / regist_acysem`，正好是查詢課程要用的那組選單欄位。這解釋了為什麼同一門課在不同人的帳號下會查到不同的採計方式。
+
+## 17. 第二輪對匯出功能的補充規則
+
+1. 有志願群組的課，**一定**要使用者明確選志願序，範圍 1..`wish_limit`；空值、0 都送得出去而且會毀掉那門課的分發機會。
+2. 送出前先用 `getCosCategoryWish` 算好這個群組已經用掉哪些志願序（但剛寫入後要等幾秒再讀），並照 `wish.F > cos_limit` 顯示「已達上限」。
+3. 匯出要自己算學分總和並提醒使用者，伺服器不會擋。
+4. 衝堂要自己算，`conflict_num` 只含已選上的課。
+5. 遇到 `errortype: 'wish'` 的錯誤要原文顯示給使用者，因為三種情況（超出範圍、群組滿、重複志願）處理方式不同。
+6. 改採計方式或改志願一律是「先取消再登記」，中間那段時間課是沒有登記的，要提醒使用者風險（尤其接近關閉時間）。
+
+## 18. 第二輪實驗清單
+
+| 編號 | 實驗 | 結論 |
+|---|---|---|
+| E20 | userinfo／getsemregist／codition | 身分欄位＝選單欄位；codition 只吃課號 |
+| E21 | 列出候選課與學分 | 同一選單 23 門課 |
+| E22 | conflict_num 是否含已登記 | 不含，只算已選上 |
+| E22b | 516703 失敗原因 | 未開放 → nopriority，前端查詢結果與伺服器一致 |
+| E23 | 學分上限 | 登記到 39 學分都沒擋 |
+| E24 | 群組課 wish=9 | 伺服器擋（wrong option） |
+| E25 | 志願表更新時機 | 有延遲，最終一致 |
+| E26 | 志願表自我修正 | 幾秒後回正 |
+| E27 | 群組已達上限 | 伺服器擋（Exceed the upper limit） |
+| E28 | 同群組不同志願／重複志願（學院共同） | 不同志願可以；重複志願被擋 |
+| E29 | 同群組重複志願（核心課程） | **不擋**，兩門都停在第 5 志願 |
+| E30 | 各種錯誤回應形狀、wish=0 | 見第 9 節；wish=0 會成功存成 sFlag 0 |
+| E31 | 空 wish、換採計方式 | 空 wish 成功存成 `" "`；換採計要先取消 |
