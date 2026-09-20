@@ -309,58 +309,49 @@
   // ---------- 挑選測試課程 ----------
   // 規則：capped＝有人數上限、沒有志願群組、查詢 status success；group＝有志願群組；
   // blocked＝查詢 status error；spare＝不在預排、不在正式選課的課號（拿來測預排寫入）。
-  async function pickCourses() {
+  // 挑測試課程：掃一遍預排就好（每門課一次 getregistrationcourselist），志願群組表只讀一次。
+  // scanLimit 是為了避免預排很長時整輪太慢；找齊需要的樣本就提早結束。
+  async function pickCourses({ scanLimit = 30 } = {}) {
     const { preregist, registered } = await lists()
     const regIds = new Set(registered.map((c) => String(c.cos_id)))
+    const wishMap = (await post('getCosCategoryWish')).json || {}
     const ctx = {}
+    const byGroup = new Map()
+    let scanned = 0
     for (const c of preregist) {
       const id = String(c.cos_id)
       if (regIds.has(id)) continue
+      if (scanned >= scanLimit) break
+      scanned++
       const { rec } = await reginfo(id, menuOf(c), c.category_type || '')
       if (!rec) continue
       const common = { cos_id: id, menu: menuOf(c), cos_type_code: rec.cos_type_code, wType: rec.wType, category_type: c.category_type || '', num_limit: rec.num_limit, GroupUID: rec.GroupUID, name: rec.cos_cname }
       if (rec.status === 'error' && !ctx.blocked) ctx.blocked = common
       if (rec.status !== 'success') continue
       if (rec.GroupUID) {
-        const w = ((await post('getCosCategoryWish')).json || {})[rec.GroupUID]
-        if (!ctx.group && w && Number(w.wish.F) <= Number(w.cos_limit)) ctx.group = { ...common, wish_limit: w.wish_limit, cos_limit: w.cos_limit }
+        const w = wishMap[rec.GroupUID]
+        if (!w || Number(w.wish.F) > Number(w.cos_limit)) continue   // 這個群組已經選滿，登記一定被擋
+        const row = { ...common, wish_limit: w.wish_limit, cos_limit: w.cos_limit }
+        if (!ctx.group) ctx.group = row
+        const bucket = byGroup.get(rec.GroupUID) || []
+        bucket.push(row)
+        byGroup.set(rec.GroupUID, bucket)
+        if (!ctx.groupPair && bucket.length === 2) ctx.groupPair = bucket
+        if (!ctx.core && c.category_type) ctx.core = row
       } else if (rec.num_limit !== '不限' && !ctx.capped) ctx.capped = common
-      if (ctx.capped && ctx.group && ctx.blocked && ctx.groupPair) break
+      if (ctx.capped && ctx.group && ctx.blocked && ctx.groupPair && ctx.core) break
     }
-    // 同群組的兩門課（給 group-rules 用）
-    const byGroup = new Map()
-    for (const c of preregist) {
-      const id = String(c.cos_id)
-      if (regIds.has(id)) continue
-      const { rec } = await reginfo(id, menuOf(c), c.category_type || '')
-      if (!rec || rec.status !== 'success' || !rec.GroupUID) continue
-      const w = ((await post('getCosCategoryWish')).json || {})[rec.GroupUID]
-      if (!w || Number(w.wish.F) > Number(w.cos_limit)) continue
-      const row = { cos_id: id, cos_type_code: rec.cos_type_code, wType: rec.wType, category_type: c.category_type || '', num_limit: rec.num_limit, GroupUID: rec.GroupUID, cos_limit: w.cos_limit, wish_limit: w.wish_limit, name: rec.cos_cname }
-      const bucket = byGroup.get(rec.GroupUID) || []
-      bucket.push(row)
-      byGroup.set(rec.GroupUID, bucket)
-      if (bucket.length === 2) { ctx.groupPair = bucket; break }
-    }
-    // 開課系所（使用者自己的系）選單，順便找一門不在預排也不在正式選課的課當 spare
     const me = (await post('userinfo')).json || {}
     ctx.deptMenu = { type: me.type, dep_category: me.dep_category, college_no: me.college_no, dep_uid: me.dep_uid, group: '*', grade: '*', class: '*' }
     const deptList = (await post('preregistcourse', menuParams(ctx.deptMenu, { codition: '' }))).json || []
     const preIds = new Set(preregist.map((c) => String(c.cos_id)))
     const spare = deptList.find((c) => !preIds.has(String(c.cos_id)) && !regIds.has(String(c.cos_id)))
     if (spare) ctx.spare = { cos_id: String(spare.cos_id), menu: ctx.deptMenu, name: spare.cos_cname }
-    ctx.core = preregist.filter((c) => c.category_type).map((c) => ({ cos_id: String(c.cos_id), menu: menuOf(c), category_type: c.category_type }))[0] || null
-    if (ctx.core) {
-      const { rec } = await reginfo(ctx.core.cos_id, ctx.core.menu, ctx.core.category_type)
-      ctx.core = rec && rec.status === 'success' && !regIds.has(ctx.core.cos_id)
-        ? { ...ctx.core, cos_type_code: rec.cos_type_code, wType: rec.wType, num_limit: rec.num_limit, GroupUID: rec.GroupUID, name: rec.cos_cname }
-        : null
-    }
+    ctx.scanned = scanned
     return ctx
   }
 
-  // ctx 可以重複使用：挑測試課程要掃整份預排，很慢，分批跑時先 prepare() 一次再傳進來
-  async function prepare() { return pickCourses() }
+  async function prepare(opts) { return pickCourses(opts) }
 
   async function run({ writes = false, only = null, ctx: given = null } = {}) {
     const startedAt = new Date().toISOString()
