@@ -365,11 +365,15 @@ async function registerCourse(course, row) {
     const g = await askCos({ type: 'wishgroups' })
     groups = g && g.ok ? g.groups : {}
   }
+  // 已經登記志願的課要改志願：選課網不接受直接重送，確認視窗會先取消再登記
+  const status = courseStatuses(state.schedule).get(String(course.id))
+  const currentWish = status && status.state === 'wish' && status.wishNo ? status.wishNo : null
   const outcome = await dialog.open({
     heading: `${course.id} ${course.name}`,
     detail: [course.teacher, describeKeys(courseSlots(course).keys)].filter(Boolean).join(' · '),
     check: { record: row.record, availability: row.availability },
     groups,
+    currentWish,
   })
   groups = null
   if (!outcome) addState.set(course.id, { ...before, busy: false })

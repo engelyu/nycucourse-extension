@@ -100,7 +100,6 @@ export function describeAvailability(record) {
   const limit = num(record.num_limit)
   const enrolled = num(record.registered_num)
   if (limit !== null && enrolled !== null && limit > 0 && enrolled >= limit) reasons.push('人數已滿')
-  if (str(record.blocked) === '1' && !canRegister) reasons.push('目前不開放加選')
   return {
     canRegister,
     needsWish: Boolean(record.GroupUID),
@@ -114,21 +113,33 @@ export function describeAvailability(record) {
 
 const WISH_RESERVED = ['first_wish_reserved_num', 'second_wish_reserved_num', 'third_wish_reserved_num', 'fourth_wish_reserved_num', 'fifth_wish_reserved_num']
 
-// 分發群組的志願序清單：第幾志願、目前填了哪門課、該志願已登記人數
-export function wishOptions(group, record) {
+// 分發群組的志願序清單。實測（報告 §3.1、§24）：
+// group.wish[n] 是「這個志願已經被幾門課用掉」的數量（不是課號），非 0 就不能再用；
+// record 的 first..fifth_wish_reserved_num 是「這門課各志願目前幾個人登記」，只有五個欄位。
+// current 是這門課目前已經登記的志願序，那一個要能重選。
+export function wishOptions(group, record, { current = null } = {}) {
   if (!group || !group.wish) return []
   const limit = num(group.wish_limit) || 0
   const options = []
   for (let no = 1; no <= limit; no++) {
-    const takenBy = str(group.wish[no]) === '0' ? '' : str(group.wish[no])
+    const isCurrent = current != null && Number(current) === no
     options.push({
       no,
-      takenBy,
-      isThisCourse: Boolean(takenBy) && takenBy === str(record && record.cos_id),
-      reserved: str((record || {})[WISH_RESERVED[no - 1]] || ''),
+      used: !isCurrent && str(group.wish[no]) !== '0' && str(group.wish[no]) !== '',
+      isCurrent,
+      registered: str((record || {})[WISH_RESERVED[no - 1]] || ''),
     })
   }
   return options
+}
+
+// 這個群組已經選上的門數超過 cos_limit 時，選課網顯示「已達上限」，不給登記
+// （實測：伺服器也會擋，回「該類課程加選數量超過規定」）
+export function wishLimitReached(group) {
+  if (!group || !group.wish) return false
+  const selected = num(group.wish.F)
+  const limit = num(group.cos_limit)
+  return selected !== null && limit !== null && selected > limit
 }
 
 // 選課網送出時的動作（chunk-b47d6638 cosRegist）：送出的 wish 就是登記後的 sFlag。
@@ -167,13 +178,29 @@ export function describeRegistration(course) {
   return wishNo ? `已登記（第 ${wishNo} 志願）` : '已登記（等分發）'
 }
 
+// 送出加選／登記的欄位。實測（報告 §20.6）伺服器對這三個欄位的態度完全不同：
+// cos_type_code 照單全收，留空會被當成必修；wType 填錯或留空會讓志願群組消失；
+// category_type 亂填會被擋，留空則悄悄進到錯的志願群組。所以缺值一律拒送，不猜。
 export function registerParams(record, wish) {
+  const cosId = str(record && record.cos_id)
+  const type = str(record && record.cos_type_code)
+  const wType = str(record && record.wType)
+  if (!cosId) throw new Error('缺少課號，不送出')
+  if (!type || !wType) throw new Error(`缺少修課別或類別（${cosId}），請重新查詢後再送出`)
   const action = regAction(record)
-  const sent = action === 'add' ? 'F' : action === 'signup' ? '1' : wish === 0 || wish ? str(wish) : ''
+  let sent
+  if (action === 'add') sent = 'F'
+  else if (action === 'signup') sent = '1'
+  else {
+    // 志願群組課程：空值和 0 都送得出去，但存進去是無效的志願序，分發時等於放棄（報告 §25）
+    const no = Number(wish)
+    if (!Number.isInteger(no) || no < 1) throw new Error(`這門課要選第幾志願才能登記（${cosId}）`)
+    sent = String(no)
+  }
   return {
-    cos_id: str(record && record.cos_id),
-    cos_type_code: str(record && record.cos_type_code),
-    wType: str(record && record.wType),
+    cos_id: cosId,
+    cos_type_code: type,
+    wType,
     wish: sent,
     category_type: str(record && record.category_type),
   }

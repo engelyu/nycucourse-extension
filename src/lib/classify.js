@@ -108,5 +108,16 @@
     return ''
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock })
+  // 取消登記前的檢查。deleteregist 同時是退選 API，所以這道閘只放行「已登記」的課：
+  // 讀不到清單、不在清單裡、已選上（sFlag F）、停修（PFW W）一律拒絕。
+  function cancelBlock(registeredList, cosId) {
+    if (!Array.isArray(registeredList)) return '讀不到正式選課清單，先不取消'
+    const row = registeredList.find((c) => String(c && c.cos_id) === String(cosId))
+    if (!row) return '這門課不在正式選課清單裡'
+    if (String(row.sFlag) === 'F') return '這門課已經選上，取消等於退選，不能從這裡做'
+    if (String(row.PFW) === 'W') return '這門課是停修狀態，不能從這裡取消'
+    return ''
+  }
+
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock, cancelBlock })
 })(globalThis)
