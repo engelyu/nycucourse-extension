@@ -326,3 +326,146 @@ API 沒有提供分發演算法。`getregistrationcourselist` 會回 `first_wish
 | E29 | 同群組重複志願（核心課程） | **不擋**，兩門都停在第 5 志願 |
 | E30 | 各種錯誤回應形狀、wish=0 | 見第 9 節；wish=0 會成功存成 sFlag 0 |
 | E31 | 空 wish、換採計方式 | 空 wish 成功存成 `" "`；換採計要先取消 |
+
+---
+
+# 第三輪：可重跑的參數矩陣
+
+前兩輪是手動實驗。第三輪把所有實驗寫成工具 `tools/cos-probe.js`，每一項都可以重跑，原始結果存在 `docs/cos-probe/cos-probe-results-2026-09-20.json`（79 筆）。
+
+## 19. 怎麼重跑
+
+1. 用自己的帳號登入 https://cos.nycu.edu.tw。
+2. 在該分頁的 DevTools Console 貼上 `tools/cos-probe.js` 全部內容。
+3. `await cosProbe.run()` 只跑唯讀實驗；`await cosProbe.run({ writes: true })` 連寫入實驗一起跑；`cosProbe.run({ only: ['setregist-wish'] })` 只跑一組。
+4. `cosProbe.dump()` 輸出 JSON 存檔。
+
+工具內建四條安全規則，沒有開關：不碰已選上的課、不對「不限人數又無志願群組」的課登記、每個寫入實驗自己還原並在結束時比對快照、不呼叫 `setAnswers` 與 OTP 端點。
+
+2026-09-20 這一輪用的測試課程：數學寫作 516713（上限 40、無群組）、計算機概論與程式設計 515008（學院共同群組，cos_limit 1）、初等應用統計 534000（核心-基本素養）、體育－羽球甲A 563038（未開放）、服務學習(一) 516702（不在預排，拿來測預排寫入）。結束時預排 54 筆、正式選課 9 門全部已選上，與開始前相同。
+
+## 20. 端點的參數矩陣
+
+### 20.1 無參數端點
+
+| 端點 | 結果 | 延遲 |
+|---|---|---|
+| `sysstatuslvl` | `[{status:'1', cmsg:'系統暢通無阻', …7 欄}]` | 47ms |
+| `checkreg` / `checkdistribute` | `{status:'success', cmsg:'', emsg:''}` | 520／259ms |
+| `userinfo` | 21 欄（見 §16） | 134ms |
+| `getpreregist` | 54 筆、每筆 43 欄 | 1193ms |
+| `getregist` | 9 筆、每筆 40 欄 | 582ms |
+| `getCosCategoryWish` | 52 個群組 | 1359ms |
+| `getdep` | **`{status:'error', msg}`** — 需要參數 | 31ms |
+| `getquesttime` / `getquestlist` | `{status:'error', msg}`（目前沒有開放問卷） | 47／50ms |
+
+`checkreg` 帶無關參數（`foo=bar`）結果不變，多餘欄位會被忽略。
+
+### 20.2 getsemregist
+
+| acy / sem | 結果 |
+|---|---|
+| 115 / 1（本學期） | 9 筆 |
+| 114 / 2、114 / 1 | 0 筆（實測帳號是大一） |
+| 999 / 9 | 0 筆，不報錯 |
+| 空 / 空 | **9 筆＝本學期**（空值等於當期） |
+
+### 20.3 preregistcourse
+
+| 參數 | 結果 |
+|---|---|
+| 正常選單 + `codition: ''` | 23 筆 |
+| `codition` 填該選單裡的課號 | 1 筆（實測另一個選單的課號 → 0 筆） |
+| `codition` 填課名、英文名、時段 | 0 筆 |
+| **缺 `codition` 欄位** | **`{status:'error'}`：這個欄位是必填** |
+| 全部欄位留空 | 0 筆 |
+| `dep_uid` 留空或亂填 | 0 筆 |
+| `grade: 1`（精確年級） | 17 筆（vs `*` 的 23 筆） |
+| `group: '*'` | 23 筆 |
+
+結論：`codition` 是「課號過濾」而且必填；課名搜尋只能自己在本機做。
+
+### 20.4 getregistrationcourselist
+
+| 參數 | 結果 |
+|---|---|
+| 正確選單 | 找到 |
+| 空選單 `{}` | **`[]`（查不到）** |
+| 少了 `dep_uid` | `[]` |
+| `grade: '*'`、`class: ''` | 找到 |
+| `grade: 1`（該課年級不符） | **`[]`** ← 年級填精確值會查不到 |
+| `category_type` 亂填 | 仍然找到（查詢不驗證類別） |
+| 不存在的課號 | `[]` |
+| 核心課程帶 / 不帶 `category_type` | **兩者都回同一個 GroupUID** |
+
+最後一條很重要：**查詢階段看不出漏帶類別的後果**，差別只在登記之後的紀錄（§20.6）。
+
+### 20.5 setpreregist / deletepreregist
+
+| 參數 | 伺服器 | 存進去的內容 | 選課網查得到嗎 |
+|---|---|---|---|
+| 正確 | 成功（**空回應內容**） | 原樣 | 找得到 |
+| `menu_data: '{}'` | 成功（空回應） | `{}` | **查不到** |
+| `menu_data` 亂填 | 成功（回傳整列） | 原樣 | **查不到** |
+| `menu_data: 'not-json'` | 成功 | 原樣存字串 | **查不到** |
+| 只送 `cos_id` + `menu_data` | **`{status:'error'}`** | — | — |
+| `wType: ''` | 成功 | 存成 `X` | 找得到 |
+| `wType: 'ZZ'` | **`{status:'error'}`** | — | — |
+| `category_type` 亂填 | **成功**，原樣存 | 亂填值 | 找得到 |
+| 不存在的課號 | `{status:'error', msg:'選課預選失敗'}` | — | — |
+| 同課號加第二次 | `{status:'error', msg:'重複預選'}` | — | — |
+
+`deletepreregist`：不存在的課號、空課號都回 `{status:'error', msg:'無此選課預選資料'}`（**空課號不會變成整批刪除**）。
+
+注意成功時的回應格式不一致：有時是空字串，有時回傳整列資料。程式要把「HTTP 2xx 且內容為空」當成成功。
+
+### 20.6 setregist：每個欄位的異常值
+
+**wish（有上限、無志願群組的課）**：送 `1`、空字串、`0`、`9`、`X` — **全部成功，全部存成 `sFlag='1'`**。這類課的 wish 完全由伺服器決定。
+
+**wish（有志願群組，`wish_limit=6`）**：
+
+| 送出 | 結果 |
+|---|---|
+| `1`、`6` | 成功，`sFlag` 就是該值 |
+| `7`（超過 wish_limit） | **error**：`志願登記超過規定數量(wrong option)`，errortype `wish` |
+| `0` | **成功，`sFlag='0'`** ← 無效狀態 |
+| 空字串 | **成功，`sFlag=' '`（空白字元）** ← 無效狀態 |
+
+**採計欄位（以核心課程 534000 初等應用統計測試）**：
+
+| 送出 | 存成 |
+|---|---|
+| 照查詢結果（`E`／`E`／正確類別） | 修課別 E、wtype E、群組 `51CE2C18`（基本素養）、brief Z102 ✓ |
+| `category_type` 留空 | 修課別 E、wtype E、**群組變成 `6D27BD78`（領域課程）**、brief 仍是 Z102 |
+| `category_type` 亂填 | **error**（登記會驗證類別，預排不會） |
+| 當成選修（`2`／`X`／空） | 修課別 2、wtype X、**沒有群組**、沒有 brief |
+| `wType: '9'`（無效值） | 修課別 E、wtype **X**、**群組消失** |
+| `wType: ''` | 同上：wtype X、**群組消失** |
+| `cos_type_code: 'Z'`（亂填） | **原樣存成 Z**、wtype E、群組保留 |
+| `cos_type_code: ''` | **自動變成 `1`（必修）**、wtype E、群組保留 |
+
+三個欄位三種行為：`category_type` 會驗證、`wType` 無效值會被降級成 X 並**連帶讓志願群組消失**、`cos_type_code` 原樣照收、留空則預設為必修。
+
+### 20.7 錯誤回應總表
+
+| 操作 | 回應 |
+|---|---|
+| 登記不存在的課號 / 空課號 | `無權限加選，課號(…)`，errortype `nopriority` |
+| 登記未開放的課（該群組已滿時） | `該類課程加選數量超過規定(Exceed the upper limit)`，errortype `wish` |
+| 已登記的課再送一次 | `重複選課`（無 errortype） |
+| `deleteregist` 沒登記 / 空課號 / 不存在 | `無此選課資料` |
+| 同群組第二門課用不同志願 | 成功 |
+| 同群組重複志願（`cos_limit=1`，學院共同） | `重複登記志願(option to repeat)`，errortype `wish` |
+| 同群組重複志願（`cos_limit=100`，核心課程） | **成功，不擋** |
+
+## 21. 第三輪新增的結論
+
+1. **`cos_type_code` 留空會被當成必修**。匯出時這個欄位絕對不能空著。
+2. **`wType` 填錯或留空會讓志願群組消失**，課變成一般登記，志願序完全失效 — 而且伺服器回 success。
+3. `category_type` 是三個欄位裡唯一會驗證的，但**留空不會被擋，只會進錯群組**。
+4. `preregistcourse` 的 `codition` 是必填欄位，漏了會直接失敗。
+5. `getregistrationcourselist` 的 `grade` 要用 `*`，填精確年級會查不到。
+6. `getdep` 不能無參數呼叫。
+7. `getsemregist` 空參數等於查當期。
+8. 預排的空課號刪除不會誤刪全部，這點是安全的。
