@@ -199,3 +199,7 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; padding: 8px 14px; border-radius: 8px; background: CanvasText; color: Canvas; font-size: 13px; box-shadow: 0 4px 16px rgba(0, 0, 0, .2); }
 .toast[hidden] { display: none; }
 .toast button.link { color: Canvas; font-size: 13px; }
+
+/* 選課系統暫停（分發時段）的橫幅：訊息是選課網原文，自帶暫停時間 */
+.sys-banner { flex-basis: 100%; margin: 6px 0 0; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--error); background: color-mix(in srgb, var(--error) 10%, Canvas); font-size: 13px; }
+.sys-banner[hidden] { display: none; }

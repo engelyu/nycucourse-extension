@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import '../src/lib/classify.js'
 
-const { classifyResult, confirmWithList, removalBlock, cancelBlock } = globalThis.NycuClassify
+const { classifyResult, confirmWithList, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
 
 test('空回應代表成功加入', () => {
   assert.deepEqual(classifyResult('516702', ''), { id: '516702', status: 'added', msg: '' })
@@ -144,4 +144,20 @@ test('cancelBlock 只放行已登記的課', () => {
   assert.equal(cancelBlock([{ cos_id: '516713', sFlag: '2', PFW: 'W' }], '516713'), '這門課是停修狀態，不能從這裡取消')
   assert.equal(cancelBlock([{ cos_id: '516713', sFlag: '2' }], '516713'), '')
   assert.equal(cancelBlock([{ cos_id: 516713, sFlag: '1' }], '516713'), '')
+})
+
+// 報告 §1.2：setpreregist 會照收任何 menu_data（包括 {}），但選課網自己之後就查不到這門課，
+// 使用者看到「已加入」卻完全不能選。所以沒有有效選單路徑一律不寫入。
+test('preregParamsProblem 擋下沒有有效選單路徑的加入', () => {
+  const ok = { cos_id: '516702', menu_data: JSON.stringify({ type: 1, dep_category: '3*', college_no: 'S', dep_uid: 'A0C3EB6F', group: '*', grade: '*', class: '*' }), wType: 'X', GroupName: 'null', GroupName_E: 'null', category_type: '', category_cname: 'null', category_ename: 'null' }
+  assert.equal(preregParamsProblem(ok), '')
+  assert.match(preregParamsProblem(undefined), /選單路徑/)
+  assert.match(preregParamsProblem(null), /選單路徑/)
+  assert.match(preregParamsProblem({ ...ok, menu_data: '{}' }), /選單路徑/)
+  assert.match(preregParamsProblem({ ...ok, menu_data: '' }), /選單路徑/)
+  assert.match(preregParamsProblem({ ...ok, menu_data: 'not-json' }), /選單路徑/)
+  assert.match(preregParamsProblem({ ...ok, menu_data: JSON.stringify({ type: 1 }) }), /選單路徑/, '沒有 dep_uid 的選單也查不到')
+  assert.match(preregParamsProblem({ ...ok, wType: '' }), /類別/)
+  // 從預排讀回來的 menu_data 會是 &quot; 編碼，還原時也要能判斷
+  assert.equal(preregParamsProblem({ ...ok, menu_data: ok.menu_data.replace(/"/g, '&quot;') }), '')
 })

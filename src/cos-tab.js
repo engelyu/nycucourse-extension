@@ -22,6 +22,7 @@ export function cosProblem(reply) {
   if (!reply) return '選課網沒有回應'
   if (reply.reason === 'no_tab') return '找不到選課網分頁，請先開啟並登入選課網。'
   if (reply.reason === 'no_content_script') return '選課網分頁沒有回應，請重新整理該分頁。'
+  if (reply.reason === 'closed') return reply.detail ? `選課系統暫停中：${reply.detail}` : '選課系統暫停中，請稍後再試。'
   if (reply.reason === 'not_logged_in') return '請先登入選課網。'
   if (reply.reason === 'stale_content_script' || reply.reason === 'unknown_message') return '選課網分頁載入的是舊版擴充功能，請重新整理該分頁後再試一次。'
   if (reply.reason === 'no_menu') return '缺少這門課的查詢資料，請在 popup 按「更新課程資料」後再試。'

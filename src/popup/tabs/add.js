@@ -198,11 +198,11 @@ async function onBulkImport() {
           : `在開課系所找不到，以「${chosen.label}」加入，請到選課頁確認`
     }
   } catch (err) {
-    if (err && err.reason === 'not_logged_in') {
-      showHint(hint, `${await unavailableMessage()}。`, 'error')
-      btn.disabled = false
-      return
-    }
+    // 任何查詢失敗都停下來，不能用空選單繼續加（會變成選課網查不到的假預排）
+    const msg = err && err.reason === 'not_logged_in' ? await unavailableMessage() : (err && err.message) || '查詢採計方式失敗'
+    showHint(hint, `${msg}。沒有加入任何課。`, 'error')
+    btn.disabled = false
+    return
   }
   showHint(hint, `正在加入 ${ids.length} 門課…`)
   let reply

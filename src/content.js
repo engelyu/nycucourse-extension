@@ -1,6 +1,6 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock, cancelBlock } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
 function token() {
@@ -25,16 +25,10 @@ async function post(path, params) {
 // 網路錯誤會丟出例外，由 runBatch 處理；HTTP 錯誤回傳失敗結果。
 // params 是選好採計方式後的加入參數（和選課網送出的一樣）；沒有就用舊的空選單加入。
 async function addOne(id, params) {
-  const { status, text } = await post('setpreregist', params || {
-    cos_id: id,
-    menu_data: '{}',
-    wType: 'X',
-    GroupName: 'null',
-    GroupName_E: 'null',
-    category_type: '',
-    category_cname: 'null',
-    category_ename: 'null',
-  })
+  // 沒有有效選單路徑就不寫：選課網會收，但之後查不到這門課，等於假的加入（報告 §1.2）
+  const problem = preregParamsProblem(params)
+  if (problem) return { id, status: 'error', msg: problem }
+  const { status, text } = await post('setpreregist', params)
   return classifyResult(id, text, status)
 }
 
@@ -158,6 +152,16 @@ async function sysStatus() {
 }
 
 // 選課系統目前是否開放（checkreg）。暫停時回 { status: 'error', cmsg: '…暫停使用選課系統…' }。
+// 拿到空白內容時，說明是為什麼：token 過期就是沒登入；token 還有效時，
+// 多半是選課系統在分發停機（2026-09-21 實測：停機時 getregist、getregistrationcourselist 都回空白），
+// 這時 checkreg 會回 { status: 'error', cmsg: '…分發時間…暫停使用選課系統…' }。
+async function unavailable() {
+  if (!tokenUsable(token(), Date.now())) return { ok: false, reason: 'not_logged_in' }
+  const st = await regStatus().catch(() => null)
+  if (st && st.status === 'error') return { ok: false, reason: 'closed', detail: String(st.cmsg || st.emsg || '').trim() }
+  return { ok: false, reason: 'not_logged_in' }
+}
+
 async function regStatus() {
   if (!tokenUsable(token(), Date.now())) return null
   const { status, text } = await post('checkreg', {})
@@ -263,7 +267,8 @@ async function register(params) {
     category_type: params.category_type,
   })
   if (!isOk(status)) throw new Error(`選課網錯誤（HTTP ${status}）`)
-  return text
+  // 正常情況一定回 JSON；空白代表系統沒有處理（例如分發停機），交給 unavailable() 說明原因
+  return text.trim() ? text : null
 }
 
 // 即時選課人數：以系所為單位查詢，一次拿回整個系所的課
@@ -315,7 +320,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'courselist') {
     serial(() => courseList(message.menu)).then(
-      (list) => sendResponse(list === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, list }),
+      async (list) => sendResponse(list === null ? await unavailable() : { ok: true, list }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
@@ -343,42 +348,47 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'deptcounts') {
     serial(() => deptCounts(message.menus)).then(
-      (lists) => sendResponse(lists === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, lists }),
+      async (lists) => sendResponse(lists === null ? await unavailable() : { ok: true, lists }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
   }
   if (message.type === 'reginfo') {
     serial(() => regInfo({ cosId: message.cosId, menu: message.menu })).then(
-      (json) => sendResponse(json === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, json }),
+      async (json) => sendResponse(json === null ? await unavailable() : { ok: true, json }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
   }
   if (message.type === 'deptree') {
     serial(depTree).then(
-      (tree) => sendResponse(tree === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, tree }),
+      async (tree) => sendResponse(tree === null ? await unavailable() : { ok: true, tree }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
   }
   if (message.type === 'wishgroups') {
     serial(wishGroups).then(
-      (groups) => sendResponse(groups === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, groups }),
+      async (groups) => sendResponse(groups === null ? await unavailable() : { ok: true, groups }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
   }
   if (message.type === 'register') {
     serial(() => register(message.params || {})).then(
-      (text) => sendResponse(text === null ? { ok: false, reason: 'not_logged_in' } : { ok: true, text }),
+      async (text) => sendResponse(text === null ? await unavailable() : { ok: true, text }),
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true
   }
   if (message.type === 'courses') {
     serial(courseLists).then(
-      (lists) => sendResponse(lists ? { ok: true, ...lists } : { ok: false, reason: 'not_logged_in' }),
+      async (lists) => {
+        if (!lists) return sendResponse(await unavailable())
+        // 停機時預排照常，正式選課回空白：附上原因讓畫面說清楚哪一邊沒更新
+        const why = lists.registered === null ? await unavailable() : null
+        sendResponse({ ok: true, ...lists, ...(why && why.reason === 'closed' ? { registeredClosed: why.detail } : {}) })
+      },
       (err) => sendResponse({ ok: false, reason: 'network', detail: String(err && err.message ? err.message : err) }),
     )
     return true

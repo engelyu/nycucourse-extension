@@ -6,6 +6,7 @@ import { findAttributionOptions, needsChoice, preregParams, courseDepUids, descr
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
+import { parseRegStatus } from './lib/regstatus.js'
 import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
@@ -339,6 +340,7 @@ async function queryCourse(course) {
     }
     addState.set(course.id, rows.length ? { status: 'queried', rows } : { status: 'error', msg: '在選課網找不到這門課' })
   } catch (err) {
+    if (err.reply && err.reply.reason === 'closed') showClosed(err.reply.detail)
     addState.set(course.id, { status: 'error', msg: errorText(err, '查詢失敗') })
   }
   renderResults()
@@ -408,10 +410,35 @@ let statusMessage = ''
 
 async function syncStatus() {
   const reply = await askCos({ type: 'courses' })
-  if (!reply || !reply.ok) return needsCos(reply) ? '請先開啟並登入選課網，狀態維持原樣。' : `${cosProblem(reply)}，狀態維持原樣。`
+  if (!reply || !reply.ok) {
+    if (reply && reply.reason === 'closed') showClosed(reply.detail)
+    return needsCos(reply) ? '請先開啟並登入選課網，狀態維持原樣。' : `${cosProblem(reply)}，狀態維持原樣。`
+  }
   const { schedule } = await chrome.storage.local.get('schedule')
   await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
+  // 分發停機時預排讀得到、正式選課讀不到：講清楚哪一邊沒有更新
+  if (reply.registeredClosed !== undefined) {
+    showClosed(reply.registeredClosed)
+    return '預排已更新；選課系統暫停中，正式選課維持原樣。'
+  }
   return ''
+}
+
+// ---------- 選課系統暫停（分發時段） ----------
+// 停機時預排照常可以加入、移除（2026-09-21 實測），查詢、加選、登記要等開放。
+
+function showClosed(message) {
+  const banner = $('#sys-banner')
+  banner.textContent = `選課系統暫停中${message ? `：${message}` : '。'} 這段時間仍然可以加入、移除預排；查詢、加選、登記要等開放後再做。`
+  banner.hidden = false
+}
+
+async function checkRegStatus() {
+  const reply = await askCos({ type: 'regstatus' })
+  if (!reply || !reply.ok) return
+  const st = parseRegStatus(reply.json)
+  if (!st.open) showClosed(st.message)
+  else $('#sys-banner').hidden = true
 }
 
 function statusAtText() {
@@ -578,6 +605,7 @@ async function init() {
     if (changes.schedule || changes.courseData) render()
   })
   render()
+  checkRegStatus()
   if (!(await findCosTab())) {
     const hint = $('#cos-hint')
     hint.textContent = '要加入預排的話，請先開啟並登入選課網。'

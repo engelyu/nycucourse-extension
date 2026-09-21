@@ -119,5 +119,21 @@
     return ''
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock, cancelBlock })
+  // 加入預排前的檢查。選課網會照收任何 menu_data（包括 {}），但之後它自己的加選視窗就查不到這門課，
+  // 使用者看到「已加入」其實完全不能選（0.5.3 以前的嚴重 bug，報告 §1.2）。沒有有效選單路徑一律不寫入。
+  function preregParamsProblem(params) {
+    const noMenu = '找不到這門課在選課網的選單路徑，沒有加入（加進去選課網也查不到這門課）。請先更新課程資料再試。'
+    if (!params || typeof params !== 'object') return noMenu
+    let menu = null
+    try {
+      menu = JSON.parse(String(params.menu_data || '').replace(/&quot;/g, '"'))
+    } catch {
+      return noMenu
+    }
+    if (!menu || typeof menu !== 'object' || !menu.dep_uid) return noMenu
+    if (!params.wType) return '缺少類別資料，沒有加入。請重新查詢採計方式再試。'
+    return ''
+  }
+
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem })
 })(globalThis)
