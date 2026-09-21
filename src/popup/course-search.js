@@ -229,12 +229,11 @@ async function addSingle(id) {
   try {
     options = await optionsFor(id)
   } catch (err) {
-    if (err && err.reason === 'not_logged_in') {
-      state.addStatus.set(id, { status: 'error', msg: await unavailableMessage() })
-      renderAllSearches()
-      return
-    }
-    options = []
+    // 查不到採計方式就不加：以前會改用空選單加入，結果是選課網查不到的假預排
+    const msg = err && err.reason === 'not_logged_in' ? await unavailableMessage() : (err && err.message) || '查詢採計方式失敗，沒有加入'
+    state.addStatus.set(id, { status: 'error', msg })
+    renderAllSearches()
+    return
   }
   if (needsChoice(options)) {
     state.addStatus.set(id, { status: 'choose', options })
