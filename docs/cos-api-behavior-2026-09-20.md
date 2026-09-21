@@ -536,3 +536,35 @@ API 沒有提供分發演算法。`getregistrationcourselist` 會回 `first_wish
 2. **一般課程不必也不能選志願**：伺服器會強制第一志願。UI 不該對這種課顯示志願選單（選課網也沒有）。
 3. **優先序與抽籤號都不是我們能影響或顯示的**：優先序是系所設定（`classPri` 只看得到 0/1），抽籤號完全查不到。UI 不要假裝能預測分發結果。
 4. **額滿與衝堂在登記階段不會被擋**：所以匯出後的驗證只能確認「有沒有登記成功」，不能確認「會不會選上」。回報文字要照這個區分寫，不能讓使用者誤以為已經選上。
+
+---
+
+# 第五輪：分發停機時的行為（2026-09-21 10:54 實測）
+
+選課網每天 10:00–12:00 分發時停機。這次在停機中用真實帳號量了每個端點：
+
+| 端點 | 停機時 |
+|---|---|
+| `checkreg`、`checkdistribute` | `{status:'error', cmsg:'開學後加退選 分發時間 2026-09-21 10:00:00～2026-09-21 12:00:00 暫停使用選課系統…'}` |
+| `sysstatuslvl` | 仍然回「系統暢通無阻」（它是負載指標，不是開關） |
+| `getregist` | **空白內容**（HTTP 200、長度 0） |
+| `getregistrationcourselist` | **空白內容** |
+| `getpreregist` | 正常（49 筆） |
+| `setpreregist`、`deletepreregist` | **正常**：實測加入再刪除一門課都成功 |
+| `preregistcourse` | 正常 |
+| `getdep`（帶 `lang: 'tw'`） | 正常；無參數仍是 error |
+| `getCosCategoryWish` | 正常 |
+| `userinfo` | 正常 |
+| `setregist`、`deleteregist` | 沒有測（停機中送出正式選課沒有意義，也有風險） |
+
+重點：
+
+1. **空白內容不等於沒登入。**停機時正式選課相關的端點回空白，跟 token 過期看起來一模一樣。token 還有效時，要先問 `checkreg` 才能分辨。擴充功能從這次起就是這樣判斷（content script 的 `unavailable()`，回 `reason: 'closed'`）。
+2. **停機時預排照常可以加入、移除。**舊的 E2E（`closed.mjs`，照 9/17 的觀察寫的）假設停機時所有 API 都回空白，這個假設是錯的，已經更正。
+3. 9/17 那次只量了 `getregistrationcourselist`，然後推論成「全部停」。**這次的教訓：沒量過的端點不能用推論補上。**
+
+## 26. 這次連帶找到的嚴重 bug
+
+加入預排的三條路（popup 單筆、popup 批次、當期選課）在「查不到採計方式」時，都會退回 `menu_data: '{}'` 送出，畫面顯示「已加入」，實際上是選課網查不到、不能選的假預排（§1.2）。popup 單筆甚至會在查詢出錯（任何原因）時吞掉錯誤、照樣用 `{}` 送出。
+
+修法是在所有路都會經過的 content script `addOne` 擋死：`preregParamsProblem(params)` 檢查選單路徑可以解析、含 `dep_uid`、`wType` 不是空的，否則直接回錯誤、不送 `setpreregist`。popup 的兩條路也改成查詢失敗就停下並顯示原因。
