@@ -10,45 +10,57 @@
   <header class="page-head">
     <h1>當期選課</h1>
     <div class="status-bar"><button id="refresh-status" type="button">從選課網更新狀態</button><span id="status-at" class="muted"></span></div>
+    <div id="crawl" class="crawl">
+      <div class="data-bar"><button class="btn-crawl" type="button">更新課程資料</button><span class="data-status muted"></span></div>
+      <section class="crawl-progress" role="status" aria-live="polite" hidden>
+        <div class="crawl-row"><span class="crawl-title"></span><span class="crawl-elapsed"></span></div>
+        <div class="crawl-track"><div class="crawl-bar"></div></div>
+        <div class="crawl-row"><span class="crawl-detail"></span><span class="crawl-percent"></span></div>
+        <p class="crawl-hint"></p>
+      </section>
+      <p class="crawl-error hint" hidden></p>
+      <p class="semester-warning hint" role="alert" hidden></p>
+    </div>
     <p id="sys-banner" class="sys-banner" role="status" hidden></p>
   </header>
   <main class="layout">
-    <section class="results-pane" aria-label="搜尋結果">
+    <section id="results-pane" class="results-pane" aria-label="搜尋結果">
       <div class="results-bar">
         <input id="keyword" type="search" placeholder="關鍵字：課名、老師或課號" aria-label="關鍵字" autocomplete="off">
-        <button id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel">篩選</button>
         <label class="sort-label">排序 <select id="sort"></select></label>
       </div>
-      <div id="narrow-slot"></div>
       <div id="applied" class="applied" hidden></div>
       <p id="summary" class="summary"></p>
       <p id="cos-hint" class="muted" hidden></p>
       <div id="results"></div>
     </section>
-    <section class="plan-pane" aria-label="正式課表">
-      <div id="legend" class="legend"></div>
-      <p id="hidden-note" class="muted hidden-note" hidden></p>
-      <div id="timetable" class="timetable"></div>
-      <aside id="filter-panel" class="filter-panel" aria-label="篩選" hidden>
-        <div class="panel-head">
-          <h2>篩選</h2>
-          <button id="filter-close" type="button" aria-label="關閉篩選">✕</button>
-        </div>
+    <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="調整左右寬度" aria-controls="results-pane plan-pane" aria-valuemin="0" aria-valuemax="100" tabindex="0" title="拖曳調整寬度，雙擊回到預設"></div>
+    <section id="plan-pane" class="plan-pane" aria-label="課表預覽與篩選設定">
+      <div class="pane-tabs" role="tablist" aria-label="右欄">
+        <button id="tab-preview" type="button" role="tab" aria-controls="panel-preview">課表預覽</button>
+        <button id="tab-filters" type="button" role="tab" aria-controls="panel-filters">篩選設定</button>
+      </div>
+      <div id="panel-preview" class="pane-panel" role="tabpanel" aria-labelledby="tab-preview">
+        <div id="legend" class="legend"></div>
+        <p id="hidden-note" class="muted hidden-note" hidden></p>
+        <div id="timetable" class="timetable"></div>
+      </div>
+      <div id="panel-filters" class="pane-panel" role="tabpanel" aria-labelledby="tab-filters" hidden>
         <section class="panel-block">
           <h3>時段</h3>
           <div class="toolbar">
-            <button id="fill-registered" type="button">帶入空堂：避開正式選課</button>
-            <button id="fill-all" type="button">帶入空堂：避開正式選課＋預排</button>
-            <button id="clear" type="button">全部清除</button>
+            <button id="select-all" type="button">全選</button>
+            <button id="select-free" type="button" title="全部時段扣掉已選上的課（已登記、預排、私人行程都算空堂）">空堂</button>
+            <button id="clear" type="button">清除</button>
             <button id="undo" type="button" title="復原上一步（⌘Z／Ctrl+Z）" disabled>復原</button>
             <span id="count" class="muted"></span>
           </div>
-          <p class="muted tip">框選想上課的時段，找出落在這些時段的課。按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。</p>
+          <p class="muted tip">框選想上課的時段，找出落在這些時段的課。按住拖曳可以框選；從已選的格子開始拖曳就是取消。點星期或節次可以整天、整節切換。「空堂」是扣掉已選上的課以外的所有時段。</p>
           <div id="grid-legend" class="legend"></div>
           <div id="grid" class="slot-grid"></div>
         </section>
         <form id="filters" class="filters" autocomplete="off"></form>
-      </aside>
+      </div>
     </section>
   </main>
   <dialog id="detail" class="detail"></dialog>

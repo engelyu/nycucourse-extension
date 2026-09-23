@@ -119,38 +119,65 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .slot-grid .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .slot-grid .head:focus-visible { outline: 2px solid var(--accent); }
 
-/* ---------- 版面：左搜尋結果、右正式課表 ---------- */
+/* ---------- 版面：左搜尋結果 | 分隔線 | 右欄（課表預覽／篩選設定） ---------- */
 
 .page-head { display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: baseline; margin-bottom: 12px; }
 .page-head .status-bar { margin: 0; }
-.layout { display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 55fr); gap: 24px; align-items: start; }
+/* --left 由 split-view.js 依拖曳結果設定（像素），兩邊最小寬度見 src/lib/split.js */
+.layout { display: grid; grid-template-columns: var(--left, minmax(340px, 45fr)) 12px minmax(480px, 55fr); align-items: start; }
+
+/* 分隔線：整條 12px 都能拖，中間畫一條細線；拖曳時整頁不選字 */
+.splitter { position: sticky; top: 12px; align-self: stretch; height: calc(100vh - 24px); cursor: col-resize; touch-action: none; }
+.splitter::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: var(--line); }
+.splitter:hover::before, .splitter:focus-visible::before, body.resizing .splitter::before { background: var(--accent); }
+.splitter:focus-visible { outline: none; }
+body.resizing { cursor: col-resize; user-select: none; -webkit-user-select: none; }
 
 /* 左欄：工具列固定在頂端 */
+.results-pane { min-width: 0; padding-right: 8px; }
 .results-bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; padding: 8px 0; background: Canvas; }
 .results-bar #keyword { flex: 1; min-width: 0; padding: 4px 8px; font: inherit; }
-.results-bar #filter-toggle.active { background: var(--sel); border-color: var(--accent); }
 .sort-label { white-space: nowrap; font-size: 13px; color: var(--muted); }
 
-/* 右欄：固定在畫面上自己捲動；篩選面板蓋在課表上 */
-.plan-pane { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
-.filter-panel { position: absolute; inset: 0; z-index: 3; overflow-y: auto; padding: 0 4px 12px; background: Canvas; }
-.filter-panel[hidden] { display: none; }
-.plan-pane:has(.filter-panel:not([hidden])) { overflow: hidden; }
-.panel-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 6px 0; background: Canvas; border-bottom: 1px solid var(--line); }
-.panel-head h2 { margin: 0; font-size: 16px; }
-.panel-block h3 { margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
+/* 右欄：固定在畫面上自己捲動；tab 列固定在右欄頂端 */
+.plan-pane { min-width: 0; padding-left: 8px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.pane-tabs { position: sticky; top: 0; z-index: 3; display: flex; gap: 2px; background: Canvas; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.pane-tabs [role="tab"] { border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; background: transparent; padding: 6px 16px; color: var(--muted); }
+.pane-tabs [role="tab"][aria-selected="true"] { background: Canvas; color: CanvasText; border-color: var(--line); margin-bottom: -1px; font-weight: 600; }
+.pane-tabs [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pane-panel[hidden] { display: none; }
+.panel-block h3 { margin: 4px 0 4px; font-size: 13px; color: var(--muted); }
 
-@media (min-width: 900px) {
-  /* 面板是 position:absolute，脫離文件流不會撐開 .plan-pane 的高度；.plan-pane 的高度只看 #timetable
-     內容多寡，課表短的時候面板會被裁到那個高度。用這個 min-height 撐到滿版高，面板才有整個視窗高
-     可以用、內容自己捲動，而不是被卡在課表目前的高度 */
-  .plan-pane:has(.filter-panel:not([hidden])) { min-height: calc(100vh - 24px); }
+/* 放不下兩邊最小寬度（340 + 12 + 480 + 左右 padding 48）時改成上下排 */
+@media (max-width: 879px) {
+  .layout { grid-template-columns: 1fr !important; }
+  .splitter { display: none; }
+  .results-pane { padding-right: 0; }
+  .plan-pane { position: static; max-height: none; overflow: visible; padding-left: 0; margin-top: 16px; }
 }
 
-@media (max-width: 899px) {
-  .layout { grid-template-columns: 1fr; }
-  .plan-pane { position: static; max-height: none; overflow: visible; }
-  .filter-panel { position: static; margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 10px; }
+/* 更新課程資料 */
+.crawl { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.data-bar { display: flex; gap: 10px; align-items: center; }
+.crawl-progress { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; min-width: 320px; }
+.crawl-progress[hidden] { display: none; }
+.crawl-row { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+.crawl-title { font-weight: 600; color: CanvasText; }
+.crawl-elapsed { font-variant-numeric: tabular-nums; }
+.crawl-track { position: relative; height: 6px; margin: 6px 0; border-radius: 3px; background: var(--line); overflow: hidden; }
+.crawl-bar { height: 100%; width: 0; border-radius: 3px; background: var(--accent); transition: width .3s ease; }
+.crawl-track.indeterminate .crawl-bar { position: absolute; width: 35%; animation: crawl-slide 1.2s ease-in-out infinite; }
+@keyframes crawl-slide { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .crawl-track.indeterminate .crawl-bar { animation: none; width: 100%; opacity: .45; }
+}
+.crawl-hint { margin: 4px 0 0; color: var(--muted); }
+.crawl-hint.slow, .hint.warn { color: #b45309; }
+.hint { margin: 0; font-size: 12px; }
+.hint[hidden] { display: none; }
+.hint.error { color: var(--error); }
+@media (prefers-color-scheme: dark) {
+  .crawl-hint.slow, .hint.warn { color: #f59e0b; }
 }
 
 /* 右欄正式課表：列高依那一節最多幾堂課自動撐高 */

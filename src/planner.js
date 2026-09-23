@@ -1,7 +1,7 @@
 // 當期選課頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
-import { ALL_SLOTS, occupiedSlots, freeSlots, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
+import { ALL_SLOTS, freeOfSelected, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
 import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution, restoreParams } from './lib/attribution.js'
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
@@ -10,7 +10,9 @@ import { parseRegStatus, closedNotice } from './lib/regstatus.js'
 import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
-import { createFilterPanel } from './planner/filter-panel.js'
+import { createPaneTabs } from './planner/pane-tabs.js'
+import { createSplitView } from './planner/split-view.js'
+import { createCrawlBar } from './planner/crawl-bar.js'
 import { createTimetable } from './planner/timetable.js'
 import { createCourseDetail } from './planner/course-detail.js'
 
@@ -24,14 +26,15 @@ const state = {
   filters: { ...DEFAULT_FILTERS },
   schedule: { sources: {}, manual: [], overrides: {} },
   courseData: null,
-  filterOpen: true,
+  paneTab: 'preview', // 右欄目前的 tab：preview（課表預覽）或 filters（篩選設定）
+  split: undefined, // 左欄佔的寬度比例，沒調過就用預設
 }
 const addState = new Map() // 課號 -> { status: 'pending'|'choose'|'added'|'exists'|'error', ... }
 let grid = null
 let timetable = null
 let deptPicker = null
 let depTree = null
-let panel = null
+let tabs = null
 
 const courses = () => (state.courseData && state.courseData.courses) || []
 
@@ -39,7 +42,7 @@ const courses = () => (state.courseData && state.courseData.courses) || []
 
 async function save() {
   try {
-    await chrome.storage.local.set({ planner: { selection: [...state.selection], filters: state.filters, filterOpen: state.filterOpen } })
+    await chrome.storage.local.set({ planner: { selection: [...state.selection], filters: state.filters, paneTab: state.paneTab, split: state.split } })
   } catch {}
 }
 
@@ -47,12 +50,13 @@ function restore(saved) {
   if (!saved || typeof saved !== 'object') return
   if (Array.isArray(saved.selection)) state.selection = new Set(saved.selection.filter((k) => VALID.has(k)))
   if (saved.filters && typeof saved.filters === 'object') state.filters = { ...DEFAULT_FILTERS, ...saved.filters }
-  if (typeof saved.filterOpen === 'boolean') state.filterOpen = saved.filterOpen
+  if (saved.paneTab === 'preview' || saved.paneTab === 'filters') state.paneTab = saved.paneTab
+  if (Number.isFinite(saved.split)) state.split = saved.split
 }
 
 // ---------- 時段 ----------
 
-// 復原：選取的每次變更都記下前一個狀態（帶入空堂、全部清除會整個取代，最需要能退回）
+// 復原：選取的每次變更都記下前一個狀態（全選、空堂、清除會整個取代，最需要能退回）
 const history = []
 const HISTORY_LIMIT = 30
 
@@ -74,8 +78,9 @@ function undo() {
   setSelection(history.pop(), { remember: false })
 }
 
-function fill(sources) {
-  setSelection(freeSlots(occupiedSlots(scheduleItems(state.schedule, sources))))
+// 空堂：全部時段扣掉已選上的課（已登記、預排、私人行程都算空堂）
+function selectFree() {
+  setSelection(freeOfSelected(state.schedule))
 }
 
 // ---------- 篩選 ----------
@@ -222,15 +227,18 @@ function renderResults() {
 
 function drawResults() {
   const list = courses()
-  if (panel) panel.setCount(appliedCount(state.filters, state.selection))
+  if (tabs) {
+    const n = appliedCount(state.filters, state.selection)
+    tabs.setLabel('filters', n ? `篩選設定 (${n})` : '篩選設定')
+  }
   const summary = $('#summary')
   if (!list.length) {
-    summary.textContent = '還沒有課程資料，請先在擴充功能的「加入預排」按「更新課程資料」。'
+    summary.textContent = '還沒有課程資料，請先按上方「更新課程資料」。'
     $('#results').replaceChildren()
     return
   }
   if (!state.selection.size) {
-    summary.textContent = '先按「篩選」框選時段，或在篩選裡按「帶入空堂」。'
+    summary.textContent = '先到右邊「篩選設定」框選時段，或按「全選」「空堂」。'
     $('#results').replaceChildren()
     return
   }
@@ -552,19 +560,36 @@ async function init() {
     onRemove: removeFromPrereg,
   })
   dialog = createRegisterDialog()
-  panel = createFilterPanel({
-    panel: $('#filter-panel'),
-    toggle: $('#filter-toggle'),
-    close: $('#filter-close'),
-    home: document.querySelector('.plan-pane'),
-    narrowSlot: $('#narrow-slot'),
-    initialOpen: state.filterOpen,
-    detail,
-    onToggle: (open) => {
-      state.filterOpen = open
+  tabs = createPaneTabs({
+    tabs: {
+      preview: { tab: $('#tab-preview'), panel: $('#panel-preview') },
+      filters: { tab: $('#tab-filters'), panel: $('#panel-filters') },
+    },
+    initial: state.paneTab,
+    onChange: (id) => {
+      state.paneTab = id
       save()
     },
   })
+  createSplitView({
+    layout: $('.layout'),
+    handle: $('#splitter'),
+    initialRatio: state.split,
+    onChange: (ratio) => {
+      state.split = ratio
+      save()
+    },
+  })
+  // 詳情小卡不是 modal（焦點不一定在卡片裡）：焦點在卡片外按 Esc 也要能關。
+  // 卡片自己也監聽 Esc（焦點在卡片裡時），那邊會 stopPropagation，不會兩邊都關
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || document.querySelector('#confirm[open]') || !detail.isOpen()) return
+    e.preventDefault()
+    detail.close()
+  })
+  const crawl = createCrawlBar($('#crawl'))
+  crawl.load()
+  askCos({ type: 'semester' }).then((reply) => crawl.setCosSemester(reply && reply.ok ? reply.semester : null))
   buildFilters()
   $('#filters').addEventListener('input', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()
@@ -584,8 +609,8 @@ async function init() {
     btn.disabled = false
     $('#status-at').textContent = statusMessage || statusAtText()
   })
-  $('#fill-registered').addEventListener('click', () => fill(['registered']))
-  $('#fill-all').addEventListener('click', () => fill(['registered', 'preregist']))
+  $('#select-all').addEventListener('click', () => setSelection(new Set(ALL_SLOTS)))
+  $('#select-free').addEventListener('click', selectFree)
   $('#clear').addEventListener('click', () => setSelection(new Set()))
   $('#undo').addEventListener('click', undo)
   document.addEventListener('keydown', (e) => {

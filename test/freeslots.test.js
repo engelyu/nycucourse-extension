@@ -177,3 +177,35 @@ test('appliedCount：時段算一個，校區、類別、系所各算一個，�
   assert.equal(appliedCount({ campuses: [], categories: [], deps: [], keyword: 'x' }, new Set()), 0)
   assert.equal(appliedCount({ campuses: ['GF'], categories: ['必修', '選修'], deps: ['資工'], keyword: '' }, new Set(['1-3', '1-4'])), 5)
 })
+
+// 「空堂」按鈕：只避開已選上（sFlag F）的課。已登記（等分發）、預排、私人行程都算空堂。
+// 在課表頁隱藏的已選上課程仍然要避開，那是真的要去上的課。
+import { freeOfSelected } from '../src/lib/freeslots.js'
+
+test('freeOfSelected 只扣掉已選上課程的時段', () => {
+  const schedule = {
+    sources: {
+      registered: {
+        semester: '1151',
+        courses: [
+          { cos_id: '1', cos_cname: '已選上', cos_time: 'M34-SC101[GF]', sFlag: 'F' },
+          { cos_id: '2', cos_cname: '已登記', cos_time: 'T12-SC102[GF]', sFlag: '1' },
+          { cos_id: '3', cos_cname: '停修', cos_time: 'W12-SC103[GF]', sFlag: 'F', PFW: 'W' },
+          { cos_id: '4', cos_cname: '隱藏但已選上', cos_time: 'R56-SC104[GF]', sFlag: 'F' },
+        ],
+      },
+      preregist: { semester: '1151', courses: [{ cos_id: '5', cos_cname: '預排', cos_time: 'F34-SC105[GF]' }] },
+    },
+    manual: [manualItem({ title: '打工', slots: [{ day: 6, period: '3' }] })],
+    overrides: { 4: { hidden: true } },
+  }
+  const free = new Set(freeOfSelected(schedule))
+  assert.equal(free.size, ALL_SLOTS.length - 4)
+  for (const k of ['1-3', '1-4', '4-5', '4-6']) assert.equal(free.has(k), false, `${k} 是已選上的課，不是空堂`)
+  for (const k of ['2-1', '2-2', '3-1', '5-3', '6-3']) assert.equal(free.has(k), true, `${k} 應該算空堂`)
+})
+
+test('freeOfSelected 沒有課表資料時全部都是空堂', () => {
+  assert.deepEqual(freeOfSelected(null), ALL_SLOTS)
+  assert.deepEqual(freeOfSelected({}), ALL_SLOTS)
+})
