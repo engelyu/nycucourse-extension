@@ -6,7 +6,7 @@ import { findAttributionOptions, needsChoice, preregParams, courseDepUids, descr
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
-import { parseRegStatus } from './lib/regstatus.js'
+import { parseRegStatus, closedNotice } from './lib/regstatus.js'
 import { createSlotGrid } from './planner/slot-grid.js'
 import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
@@ -419,7 +419,7 @@ async function syncStatus() {
   // 分發停機時預排讀得到、正式選課讀不到：講清楚哪一邊沒有更新
   if (reply.registeredClosed !== undefined) {
     showClosed(reply.registeredClosed)
-    return '預排已更新；選課系統暫停中，正式選課維持原樣。'
+    return '預排已更新；選課網目前讀不到正式選課，正式選課維持原樣。'
   }
   return ''
 }
@@ -429,7 +429,7 @@ async function syncStatus() {
 
 function showClosed(message) {
   const banner = $('#sys-banner')
-  banner.textContent = `選課系統暫停中${message ? `：${message}` : '。'} 這段時間仍然可以加入、移除預排；查詢、加選、登記要等開放後再做。`
+  banner.textContent = closedNotice(message)
   banner.hidden = false
 }
 

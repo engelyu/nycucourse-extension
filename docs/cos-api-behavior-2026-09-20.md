@@ -568,3 +568,41 @@ API 沒有提供分發演算法。`getregistrationcourselist` 會回 `first_wish
 加入預排的三條路（popup 單筆、popup 批次、當期選課）在「查不到採計方式」時，都會退回 `menu_data: '{}'` 送出，畫面顯示「已加入」，實際上是選課網查不到、不能選的假預排（§1.2）。popup 單筆甚至會在查詢出錯（任何原因）時吞掉錯誤、照樣用 `{}` 送出。
 
 修法是在所有路都會經過的 content script `addOne` 擋死：`preregParamsProblem(params)` 檢查選單路徑可以解析、含 `dep_uid`、`wType` 不是空的，否則直接回錯誤、不送 `setpreregist`。popup 的兩條路也改成查詢失敗就停下並顯示原因。
+
+## 27. 第六輪：選課結束後選課網改版（2026-09-23 20:30–21:00 實測，唯讀）
+
+選課結束後選課網重新部署（前端 `/js/app.6f00adc0.js`，舊的 chunk 檔名都換了）。只做讀取，沒有寫入任何資料。
+
+**登入權杖改存 sessionStorage。** 新前端所有讀寫都用 `sessionStorage.getItem("token")`，登入、OTP、回應裡的 `new_token` 也都寫進 sessionStorage。sessionStorage 每個分頁各自一份，所以**每個選課網分頁各自登入**；從 portal 點進選課系統的那個分頁才有權杖，新開的分頁會被導回 portal。localStorage 只剩改版前留下的舊權杖（這次看到的是 01:25 發、09:25 過期的那個）。
+
+擴充功能原本只讀 localStorage，已登入的分頁也被判成沒登入，「從選課網更新狀態」一律顯示「請先開啟並登入選課網」。修正：`pickToken` 先用 sessionStorage；`ping` 回報 `loggedIn`，`findCosTab` 在多個選課網分頁中挑已登入的。
+
+**API 路徑改成 REST 形式，但舊路徑照常可用。** 新前端呼叫 `/registration/list`、`/preregistration/list`、`/parameter/user-info` 等，參數和舊的一樣。用有效權杖對照六組新舊路徑（checkreg、checkdistribute、sysstatuslvl、getregist、getpreregist、getCosCategoryWish），**回應內容逐字相同**。無效權杖時新舊路徑都回 HTTP 404 `{"status":false,"msg":"Token verification failed"}`；不存在的路徑回前端 HTML；沒帶權杖回 HTTP 200 空白。
+
+| 舊路徑 | 新路徑 |
+|---|---|
+| sysstatuslvl / getdep / userinfo | /parameter/system-status、/parameter/department、/parameter/user-info |
+| checkreg / checkdistribute | /registration/check、/registration/distribution/check |
+| preregistcourse / getpreregist / setpreregist / deletepreregist | /preregistration/course-list、list、add、delete |
+| getCosCategoryWish / getregistrationcourselist / setregist / deleteregist / getregist / getsemregist | /registration/category-wish、course-list、add、delete、list、semester-list |
+| getquesttime / getquestlist … | /questionnaire/time、list、data、answers |
+| （新） | /withdrawal/setting、list、courses、apply、cancel（停修；apply、cancel 絕對不要呼叫） |
+
+**選課結束後各端點的狀態：**
+
+| 端點 | 回應 |
+|---|---|
+| checkreg | `{status:'error', cmsg:'選課結束', emsg:'End of course selection'}` |
+| checkdistribute | `success` |
+| getregist | HTTP 200 **空白**（和分發停機時一樣） |
+| getpreregist | 正常，50 筆 |
+| getsemregist `{acy:'115', sem:'1'}` | 正常，9 筆，全部 sFlag F；欄位同 getregist，另有 `Lock`、`PFW`、`GroupUID`、`sWithdrawal`、`eWithdrawal`，備註欄叫 `備註`，沒有 `menu_data` |
+| getsemregist 不帶參數 | `{status:'error', msg:'Sorry, something went wrong.'}`（和 9/20 不同，那時空白參數會回本學期） |
+| userinfo | 多了 `regist_acysem: [{acy:115, acysem:'1151', sem:'1'}, {acy:114, acysem:'1143', sem:'X'}]` |
+| withdrawal/setting、list、courses 不帶參數 | `學年度及學期別不得空白` |
+
+選課網自己的「確認選課狀況」頁取 `userinfo.regist_acysem[0]` 的學年學期去呼叫 semester-list。擴充功能照做：`getregist` 空白時改讀 `getsemregist`（`registSemester` 取學期，沒有就退回 `lastacysem`）。停機說明也分開：訊息含「分發」才說「預排仍可改、等開放」，其他情況（選課結束）照原文說明，不叫使用者等開放。
+
+權杖內容（`acysem` 欄位）列出本學期各階段時間：停修 2026-09-29 09:00 ～ 2026-12-04 23:59，上限 2 門。
+
+重現：`e2e/sessiontoken.mjs`（scratchpad）用 Playwright 模擬以上全部行為，開兩個選課網分頁，先開的沒登入、後開的已登入。商店版 0.10.0 顯示「請先開啟並登入選課網」（重現使用者回報）；修正後讀到正式選課與預排，並顯示「選課網目前不開放選課：選課結束。」

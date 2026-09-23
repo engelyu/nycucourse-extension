@@ -1,6 +1,6 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable, pickToken, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, pickToken, registSemester, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
 // 選課網改版後權杖改存 sessionStorage（每個分頁各自登入），改版前存 localStorage；兩邊都看
@@ -183,7 +183,9 @@ async function courseLists() {
     const list = JSON.parse(text)
     return Array.isArray(list) ? list : []
   }
-  const [preregist, registered] = await Promise.all([read('getpreregist'), read('getregist')])
+  const [preregist, current] = await Promise.all([read('getpreregist'), read('getregist')])
+  // 選課結束（或分發停機）時 getregist 回空白：改讀這學期的選課結果，和選課網「確認選課狀況」一樣
+  const registered = current !== null ? current : await readSemesterRegistered().catch(() => null)
   if (preregist === null && registered === null) return null
   // 讀取失敗的清單回傳 null（不是空陣列），呼叫端才知道要保留原本的資料
   const slim = (list) => (list === null ? null : list.map((c) => ({
@@ -194,7 +196,7 @@ async function courseLists() {
     cos_credit: c.cos_credit,
     num_limit: c.num_limit,
     registered_num: c.registered_num,
-    memo: c.memo,
+    memo: c.memo ?? c['備註'],
     acy: c.acy,
     sem: c.sem,
     // 選課網自己記下的查詢路徑與通識類別，加選時要用（通識課用課程時間表的路徑查不到）
@@ -214,6 +216,18 @@ async function courseLists() {
     PFW: c.PFW,
   })))
   return { preregist: slim(preregist), registered: slim(registered) }
+}
+
+// getsemregist 回傳指定學期的選課結果（欄位和 getregist 相同，備註欄叫「備註」，沒有 menu_data）
+async function readSemesterRegistered() {
+  const info = await post('userinfo', {})
+  if (!isOk(info.status) || !info.text.trim()) return null
+  const semester = registSemester(JSON.parse(info.text))
+  if (!semester) return null
+  const { status, text } = await post('getsemregist', semester)
+  if (!isOk(status) || !text.trim()) return null
+  const list = JSON.parse(text)
+  return Array.isArray(list) ? list : null
 }
 
 // 正式選課：查一門課能不能加選（等同選課網按下加選時做的檢查）

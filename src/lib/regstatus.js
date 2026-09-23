@@ -18,6 +18,14 @@ export function parseRegStatus(body) {
   return { open: false, message }
 }
 
+// 暫停的說明。分發停機（訊息含「分發」）時預排照常可以改（2026-09-21 實測）；
+// 其他情況（例如 2026-09-23 的「選課結束」）不會再開放，不能叫使用者等開放。
+export function closedNotice(message) {
+  const msg = cleanMessage(message)
+  if (msg.includes('分發')) return `選課系統暫停中：${msg} 這段時間仍然可以加入、移除預排；查詢、加選、登記要等開放後再做。`
+  return `選課網目前不開放選課${msg ? `：${msg}` : ''}。查詢、加選、登記都不能使用；課表仍可從選課網更新。`
+}
+
 // sysstatuslvl 的狀態 1 代表暢通，只有其他狀態才值得提示使用者
 export function sysStatusNotice(status) {
   if (!status || !status.message) return ''

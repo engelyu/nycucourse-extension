@@ -46,3 +46,18 @@ test('sysstatuslvl 狀態 1 是暢通，不需要提示', () => {
   assert.equal(sysStatusNotice(null), '')
   assert.equal(sysStatusNotice({ code: '', message: '公告' }), '公告')
 })
+
+// 分發停機（2026-09-21 實測）時預排照常可以改；選課結束（2026-09-23 實測 checkreg 回「選課結束」）則是整段結束。
+// 兩種情況的說明不能一樣，不能對「選課結束」說「等開放後再做」。
+import { closedNotice } from '../src/lib/regstatus.js'
+
+test('分發停機：說明預排仍可改，查詢加選登記要等開放', () => {
+  const msg = '開學後加退選 分發時間 2026-09-21 10:00:00～2026-09-21 12:00:00 暫停使用選課系統，如造成不便，敬請見諒！'
+  assert.equal(closedNotice(msg), `選課系統暫停中：${msg} 這段時間仍然可以加入、移除預排；查詢、加選、登記要等開放後再做。`)
+})
+
+test('選課結束：照選課網原文說明，不說「等開放」', () => {
+  const text = closedNotice('選課結束')
+  assert.equal(text, '選課網目前不開放選課：選課結束。查詢、加選、登記都不能使用；課表仍可從選課網更新。')
+  assert.ok(!text.includes('等開放'))
+})
