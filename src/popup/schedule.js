@@ -1,14 +1,12 @@
-// 課表 tab：開學後點開看一眼課表就關掉。只顯示正式選課＋自訂行程，
+// popup 的課表：開學後點開看一眼課表就關掉。只顯示正式選課＋自訂行程，
 // 今天那一欄加深、紅線是現在時間；點一堂課看詳情與連結。
 // 不自動去選課網更新（過了選課期可能無法登入），只在使用者按「從選課網更新」時讀一次。
-import { scheduleItems, withSyncedSources, buildWeek, mergeBlocks } from '../../lib/schedule.js'
-import { locateNow } from '../../lib/now.js'
-import { describeSlots } from '../../lib/periods.js'
-import { courseOutlineUrl } from '../../lib/links.js'
-import { wishLabel } from '../../lib/register.js'
-import { state } from '../shared.js'
-import { connectOnce, onCosChange, findCosTab } from '../cos.js'
-import { createCourseSearch } from '../course-search.js'
+import { scheduleItems, withSyncedSources, buildWeek, mergeBlocks } from '../lib/schedule.js'
+import { locateNow } from '../lib/now.js'
+import { describeSlots } from '../lib/periods.js'
+import { courseOutlineUrl } from '../lib/links.js'
+import { wishLabel } from '../lib/register.js'
+import { askCos, cosProblem } from '../cos-tab.js'
 
 const ROW_PX = 28
 const HEAD_PX = 20
@@ -17,7 +15,6 @@ const SCHEDULE_URL = () => chrome.runtime.getURL('src/schedule.html')
 let root = null
 let schedule = { sources: {}, manual: [], overrides: {} }
 let selectedKey = null
-let search = null
 let syncMessage = '' // 上次按「從選課網更新」失敗的原因
 
 const el = (sel) => root.querySelector(sel)
@@ -87,10 +84,14 @@ function renderWeek(week, located) {
     })
     grid.append(cell)
   }
-  if (located.nowLine) {
+  // 現在時間的紅線只畫在今天那一欄。絕對定位的 grid 子元素指定了 grid-column/grid-row 時，
+  // 會以那一塊區域為定位基準，所以 left/right 0 就是今天那一欄的寬度
+  if (located.nowLine && todayCol >= 0) {
     const line = document.createElement('div')
     line.className = 'now'
     line.setAttribute('aria-hidden', 'true')
+    line.style.gridColumn = `${todayCol + 2} / span 1` // 絕對定位時沒寫結束線會延伸到 grid 右緣
+    line.style.gridRow = `1 / span ${week.rows.length + 1}`
     // 每列高 ROW_PX，列與列之間有 2px 間隔
     line.style.top = `${HEAD_PX + 2 + (located.nowLine.row + located.nowLine.fraction) * (ROW_PX + 2)}px`
     grid.append(line)
@@ -157,25 +158,10 @@ function updatedText() {
 
 // 使用者按「從選課網更新」時讀一次正式選課；讀不到就沿用原本的課表，只提示原因
 async function syncFromCos() {
-  try {
-    const tab = await findCosTab()
-    if (!tab) return '找不到選課網分頁，請先開啟並登入選課網。'
-    const reply = await chrome.tabs.sendMessage(tab.id, { type: 'courses' })
-    if (!reply || !reply.ok) return reply && reply.reason === 'not_logged_in' ? '選課網沒有登入，課表維持原樣。' : '選課網沒有回應，課表維持原樣。'
-    await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
-    return ''
-  } catch {
-    return '選課網分頁沒有回應，請重新整理該分頁後再試。'
-  }
-}
-
-// 搜尋要用的課程資料；先開課表 tab 時，加入預排 tab 還沒載入過
-async function ensureCourseData() {
-  if (state.courses.length) return
-  const { courseData } = await chrome.storage.local.get('courseData')
-  if (state.courses.length) return
-  state.courseData = courseData
-  state.courses = (courseData && courseData.courses) || []
+  const reply = await askCos({ type: 'courses' })
+  if (!reply || !reply.ok) return `${cosProblem(reply)}（課表維持原樣）`
+  await chrome.storage.local.set({ schedule: withSyncedSources(schedule, reply, Date.now()) })
+  return ''
 }
 
 export async function mount(container) {
@@ -187,11 +173,6 @@ export async function mount(container) {
     if (changes.schedule) {
       schedule = changes.schedule.newValue || schedule
       render()
-    }
-    if (changes.courseData && changes.courseData.newValue) {
-      state.courseData = changes.courseData.newValue
-      state.courses = changes.courseData.newValue.courses || []
-      search.render()
     }
   })
   el('[data-action="open-schedule"]').addEventListener('click', () => chrome.tabs.create({ url: SCHEDULE_URL() }))
@@ -205,16 +186,6 @@ export async function mount(container) {
       el('.updated-at').textContent = syncMessage || updatedText()
     })
   }
-  search = createCourseSearch({ q: el('.q'), list: el('.search-results'), summary: el('.search-summary'), cosHint: true })
-  onCosChange(() => search.render())
-  await ensureCourseData()
-  el('.q').disabled = state.courses.length === 0
-  el('.q').placeholder = state.courses.length ? '找課：課名、老師或課號' : '要先在「加入預排」更新課程資料才能找課'
-  connectOnce()
   setInterval(render, 30_000)
-}
-
-export function show() {
   render()
-  search.render()
 }

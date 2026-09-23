@@ -2,6 +2,7 @@
 // 時段 key 是 "<星期>-<節次代碼>"，星期 1–7（週一 = 1）。
 import { PERIODS, parseCosTime, DAY_NAMES } from './periods.js'
 import { searchCourses } from './search.js'
+import { scheduleItems } from './schedule.js'
 
 const str = (v) => (v == null ? '' : String(v))
 
@@ -53,6 +54,14 @@ export function occupiedSlots(items) {
 }
 
 export const freeSlots = (occupied) => ALL_SLOTS.filter((k) => !occupied.has(k))
+
+// 「空堂」按鈕：扣掉已選上（sFlag F）的課，其他（已登記、預排、私人行程）都算空堂。
+// 不套用課表頁的隱藏設定：隱藏只是不顯示，已選上的課還是要去上。
+export function freeOfSelected(schedule) {
+  const s = schedule || {}
+  const selected = scheduleItems({ sources: s.sources || {}, manual: [], overrides: {} }, ['registered']).filter((i) => i.regState === 'registered')
+  return freeSlots(occupiedSlots(selected))
+}
 
 export function matchCourse(keys, selection) {
   const inCount = keys.filter((k) => selection.has(k)).length
