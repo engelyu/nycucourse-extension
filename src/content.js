@@ -1,10 +1,11 @@
 // 只在 https://cos.nycu.edu.tw/* 執行。所有 API 呼叫都是同源，帶頁面的 Bearer token。
 // src/lib/classify.js 由 manifest 先載入，提供 globalThis.NycuClassify。
-const { classifyResult, runBatch, tokenUsable, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
+const { classifyResult, runBatch, tokenUsable, pickToken, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem } = globalThis.NycuClassify
 const BASE = 'https://cos.nycu.edu.tw/'
 
+// 選課網改版後權杖改存 sessionStorage（每個分頁各自登入），改版前存 localStorage；兩邊都看
 function token() {
-  return localStorage.getItem('token') || ''
+  return pickToken(sessionStorage.getItem('token'), localStorage.getItem('token'), Date.now())
 }
 
 const isOk = (status) => status >= 200 && status < 300
@@ -304,7 +305,8 @@ function serial(task) {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || typeof message.type !== 'string') return false
   if (message.type === 'ping') {
-    sendResponse({ ok: true })
+    // loggedIn 讓擴充功能在好幾個選課網分頁裡挑出已登入的那個
+    sendResponse({ ok: true, loggedIn: tokenUsable(token(), Date.now()) })
     return false
   }
   if (message.type === 'reload') {

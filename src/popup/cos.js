@@ -20,11 +20,8 @@ export function connectOnce() {
   return connection
 }
 
-// 任何一個選課網分頁（不一定是目前的分頁）
-export async function findCosTab() {
-  const tabs = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
-  return tabs[0] || null
-}
+// 任何一個選課網分頁（不一定是目前的分頁），優先挑已登入的
+export { findCosTab } from '../cos-tab.js'
 
 async function ping(tabId) {
   try {

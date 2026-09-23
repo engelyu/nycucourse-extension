@@ -4,6 +4,7 @@ import { isCrawlAlive, createStateWriter } from './lib/crawlState.js'
 import { nextRunAt, buildPlan, summarizeResults } from './lib/autoreg.js'
 import { describeAvailability, registerParams, parseRegResult, resolveRegInfo } from './lib/register.js'
 import { parseRegStatus } from './lib/regstatus.js'
+import { findCosTab } from './cos-tab.js'
 
 const BASE = 'https://timetable.nycu.edu.tw/?r=main/'
 const REQUEST_TIMEOUT_MS = 30_000
@@ -91,7 +92,8 @@ function setBadge(results) {
 
 // 找一個選課網分頁；沒有就自己開一個背景分頁，並等 content script 就緒
 async function ensureCosTab() {
-  const [existing] = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
+  // 選課網改版後權杖在 sessionStorage，新開的分頁不會是登入狀態，所以優先用已登入的分頁
+  const existing = await findCosTab()
   const tab = existing || (await chrome.tabs.create({ url: 'https://cos.nycu.edu.tw/#/emulator', active: false }))
   for (let i = 0; i < 40; i++) {
     try {

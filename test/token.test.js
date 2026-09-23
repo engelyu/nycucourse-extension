@@ -35,3 +35,26 @@ test('無法解析或沒有 exp 時交給伺服器判斷', () => {
   assert.equal(tokenUsable('a.@@@.c', NOW), true)
   assert.equal(tokenUsable(jwt({ user: 'x' }), NOW), true)
 })
+
+// 2026-09-23 實測：選課結束後選課網改版（app.6f00adc0.js），登入權杖改存 sessionStorage（每個分頁各自一份），
+// localStorage 只剩改版前留下、已過期的舊權杖。只讀 localStorage 會讓已登入的分頁看起來沒登入。
+const { pickToken } = globalThis.NycuClassify
+
+test('pickToken 優先用 sessionStorage 的權杖', () => {
+  const fresh = jwt({ exp: NOW / 1000 + 3600 })
+  const stale = jwt({ exp: NOW / 1000 - 3600 })
+  assert.equal(pickToken(fresh, stale, NOW), fresh)
+})
+
+test('pickToken：sessionStorage 沒有或過期時，退回可用的 localStorage 權杖（改版前的選課網）', () => {
+  const fresh = jwt({ exp: NOW / 1000 + 3600 })
+  const stale = jwt({ exp: NOW / 1000 - 3600 })
+  assert.equal(pickToken(null, fresh, NOW), fresh)
+  assert.equal(pickToken(stale, fresh, NOW), fresh)
+})
+
+test('pickToken：兩邊都不能用時回傳空字串', () => {
+  const stale = jwt({ exp: NOW / 1000 - 3600 })
+  assert.equal(pickToken(null, null, NOW), '')
+  assert.equal(pickToken(stale, stale, NOW), '')
+})
