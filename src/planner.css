@@ -124,10 +124,18 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--muted
 .page-head { display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: baseline; margin-bottom: 12px; }
 .page-head .status-bar { margin: 0; }
 /* --left 由 split-view.js 依拖曳結果設定（像素），兩邊最小寬度見 src/lib/split.js */
-.layout { display: grid; grid-template-columns: var(--left, minmax(340px, 45fr)) 12px minmax(480px, 55fr); align-items: start; }
+.layout { display: grid; grid-template-columns: var(--left, minmax(340px, 45fr)) 12px minmax(480px, 55fr); }
+
+/* 寬視窗：整頁不捲動，頁首固定，左右兩欄各自捲動 */
+@media (min-width: 880px) {
+  body { height: 100vh; box-sizing: border-box; padding-bottom: 12px; display: flex; flex-direction: column; overflow: hidden; }
+  .page-head { flex: none; }
+  .layout { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .results-pane, .plan-pane { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+}
 
 /* 分隔線：整條 12px 都能拖，中間畫一條細線；拖曳時整頁不選字 */
-.splitter { position: sticky; top: 12px; align-self: stretch; height: calc(100vh - 24px); cursor: col-resize; touch-action: none; }
+.splitter { position: relative; cursor: col-resize; touch-action: none; }
 .splitter::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: var(--line); }
 .splitter:hover::before, .splitter:focus-visible::before, body.resizing .splitter::before { background: var(--accent); }
 .splitter:focus-visible { outline: none; }
@@ -140,7 +148,7 @@ body.resizing { cursor: col-resize; user-select: none; -webkit-user-select: none
 .sort-label { white-space: nowrap; font-size: 13px; color: var(--muted); }
 
 /* 右欄：固定在畫面上自己捲動；tab 列固定在右欄頂端 */
-.plan-pane { min-width: 0; padding-left: 8px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.plan-pane { min-width: 0; padding-left: 8px; }
 .pane-tabs { position: sticky; top: 0; z-index: 3; display: flex; gap: 2px; background: Canvas; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
 .pane-tabs [role="tab"] { border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; background: transparent; padding: 6px 16px; color: var(--muted); }
 .pane-tabs [role="tab"][aria-selected="true"] { background: Canvas; color: CanvasText; border-color: var(--line); margin-bottom: -1px; font-weight: 600; }
@@ -153,7 +161,7 @@ body.resizing { cursor: col-resize; user-select: none; -webkit-user-select: none
   .layout { grid-template-columns: 1fr !important; }
   .splitter { display: none; }
   .results-pane { padding-right: 0; }
-  .plan-pane { position: static; max-height: none; overflow: visible; padding-left: 0; margin-top: 16px; }
+  .plan-pane { padding-left: 0; margin-top: 16px; }
 }
 
 /* 更新課程資料 */

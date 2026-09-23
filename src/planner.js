@@ -591,6 +591,8 @@ async function init() {
   crawl.load()
   askCos({ type: 'semester' }).then((reply) => crawl.setCosSemester(reply && reply.ok ? reply.semester : null))
   buildFilters()
+  // 篩選表單只有一個文字欄位（系所搜尋），按 Enter（包括注音選字確定的 Enter）會觸發表單送出、整頁重新載入
+  $('#filters').addEventListener('submit', (e) => e.preventDefault())
   $('#filters').addEventListener('input', (e) => {
     if (!e.target.closest('.dept-picker')) readFilters()
   })
