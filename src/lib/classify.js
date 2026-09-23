@@ -57,6 +57,15 @@
     return ''
   }
 
+  // 選課結束後 getregist 回空白（2026-09-23 實測），選課網的「確認選課狀況」改用
+  // userinfo.regist_acysem[0] 的學年學期讀 getsemregist；沒有就退回 lastacysem（例如 '1151'）。
+  function registSemester(info) {
+    const first = info && Array.isArray(info.regist_acysem) ? info.regist_acysem[0] : null
+    if (first && first.acy != null && first.sem != null && String(first.sem) !== '') return { acy: String(first.acy), sem: String(first.sem) }
+    const last = info && typeof info.lastacysem === 'string' ? info.lastacysem : ''
+    return /^\d{3}[\dX]$/.test(last) ? { acy: last.slice(0, 3), sem: last.slice(3) } : null
+  }
+
   const errorMessage = (err) => String(err && err.message ? err.message : err)
 
   // 依序加入每門課，最後讀一次預排清單確認。
@@ -142,5 +151,5 @@
     return ''
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, pickToken, runBatch, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem })
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, pickToken, registSemester, runBatch, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem })
 })(globalThis)

@@ -58,3 +58,23 @@ test('pickToken：兩邊都不能用時回傳空字串', () => {
   assert.equal(pickToken(null, null, NOW), '')
   assert.equal(pickToken(stale, stale, NOW), '')
 })
+
+// 2026-09-23 實測：選課結束後 getregist 回空白，選課網自己的「確認選課狀況」改用
+// userinfo.regist_acysem[0] 的學年學期去讀 getsemregist。我們照做。
+const { registSemester } = globalThis.NycuClassify
+
+test('registSemester 取 regist_acysem 第一筆，和選課網「確認選課狀況」一樣', () => {
+  const info = { lastacysem: '1151', regist_acysem: [{ acy: 115, acysem: '1151', sem: '1' }, { acy: 114, acysem: '1143', sem: 'X' }] }
+  assert.deepEqual(registSemester(info), { acy: '115', sem: '1' })
+})
+
+test('registSemester 沒有 regist_acysem 時退回 lastacysem', () => {
+  assert.deepEqual(registSemester({ lastacysem: '1143' }), { acy: '114', sem: '3' })
+  assert.deepEqual(registSemester({ lastacysem: '114X' }), { acy: '114', sem: 'X' })
+})
+
+test('registSemester 讀不出學期時回傳 null，不要亂猜', () => {
+  assert.equal(registSemester(null), null)
+  assert.equal(registSemester({}), null)
+  assert.equal(registSemester({ regist_acysem: [], lastacysem: 'abc' }), null)
+})
