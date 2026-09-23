@@ -12,7 +12,7 @@ export function createDeptPicker(container, { onChange }) {
   const search = document.createElement('input')
   search.type = 'search'
   search.className = 'dept-search'
-  search.placeholder = '輸入系所名稱，Enter 選第一個'
+  search.placeholder = '輸入系所名稱篩選清單'
   search.setAttribute('aria-label', '搜尋系所')
   const list = document.createElement('ul')
   list.className = 'dept-list'
@@ -32,18 +32,6 @@ export function createDeptPicker(container, { onChange }) {
     query = search.value.trim()
     renderList()
   })
-  search.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    const first = options.find((o) => !selected.includes(o.name) && matches(o.name))
-    if (first) {
-      toggle(first.name)
-      search.value = ''
-      query = ''
-      renderList()
-    }
-  })
-
   function renderChips() {
     chips.replaceChildren()
     if (!selected.length) {
