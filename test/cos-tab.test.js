@@ -24,3 +24,41 @@ test('停機時顯示選課網公告的原因，而不是請使用者登入', ()
   assert.equal(cosProblem({ ok: false, reason: 'closed', detail }), `選課系統暫停中：${detail}`)
   assert.equal(cosProblem({ ok: false, reason: 'closed', detail: '' }), '選課系統暫停中，請稍後再試。')
 })
+
+// 選課網改版後權杖存在 sessionStorage，每個分頁的登入狀態各自獨立。
+// 開著好幾個選課網分頁時，要挑已登入的那個，不能隨便拿第一個。
+import { findCosTab } from '../src/cos-tab.js'
+
+function fakeChrome(tabs, replies) {
+  globalThis.chrome = {
+    tabs: {
+      query: async () => tabs,
+      sendMessage: async (tabId) => {
+        const r = replies[tabId]
+        if (r instanceof Error) throw r
+        return r
+      },
+    },
+  }
+}
+
+test('findCosTab 挑已登入的選課網分頁', async () => {
+  fakeChrome([{ id: 1 }, { id: 2 }, { id: 3 }], {
+    1: { ok: true, loggedIn: false },
+    2: new Error('Could not establish connection'),
+    3: { ok: true, loggedIn: true },
+  })
+  assert.equal((await findCosTab()).id, 3)
+})
+
+test('findCosTab 沒有已登入的分頁時，挑 content script 有回應的分頁（之後才講得出「請先登入」）', async () => {
+  fakeChrome([{ id: 1 }, { id: 2 }], { 1: new Error('no receiver'), 2: { ok: true, loggedIn: false } })
+  assert.equal((await findCosTab()).id, 2)
+})
+
+test('findCosTab 都沒回應時仍回傳第一個分頁，沒有分頁回傳 null', async () => {
+  fakeChrome([{ id: 7 }, { id: 8 }], { 7: new Error('x'), 8: undefined })
+  assert.equal((await findCosTab()).id, 7)
+  fakeChrome([], {})
+  assert.equal(await findCosTab(), null)
+})

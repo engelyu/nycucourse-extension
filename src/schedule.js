@@ -1,6 +1,7 @@
 import { manualItem, slotsFromTimeRange, slotsFromPeriodRange, itemUrl, buildWeek, scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { PERIODS, DAY_NAMES, describeSlots } from './lib/periods.js'
 import { wishLabel } from './lib/register.js'
+import { findCosTab } from './cos-tab.js'
 
 const COS_URL = 'https://cos.nycu.edu.tw/#/emulator'
 const $ = (sel) => document.querySelector(sel)
@@ -313,11 +314,6 @@ async function deleteManual() {
 }
 
 // ---------- 同步 ----------
-
-async function findCosTab() {
-  const tabs = await chrome.tabs.query({ url: 'https://cos.nycu.edu.tw/*' })
-  return tabs[0] || null
-}
 
 async function sync() {
   const btn = $('#btn-sync')

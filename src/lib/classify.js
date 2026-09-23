@@ -50,6 +50,13 @@
     return payload.exp * 1000 > nowMs + skewMs
   }
 
+  // 選課網 2026-09-23 改版後，登入權杖存在 sessionStorage（每個分頁一份）；改版前存在 localStorage。
+  // 先用 sessionStorage 的，不能用再看 localStorage（那裡可能只剩改版前留下的過期權杖）。
+  function pickToken(sessionToken, localToken, nowMs) {
+    for (const t of [sessionToken, localToken]) if (tokenUsable(t, nowMs)) return t
+    return ''
+  }
+
   const errorMessage = (err) => String(err && err.message ? err.message : err)
 
   // 依序加入每門課，最後讀一次預排清單確認。
@@ -135,5 +142,5 @@
     return ''
   }
 
-  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, runBatch, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem })
+  root.NycuClassify = Object.freeze({ classifyResult, confirmWithList, tokenUsable, pickToken, runBatch, parseSysStatus, removalBlock, cancelBlock, preregParamsProblem })
 })(globalThis)

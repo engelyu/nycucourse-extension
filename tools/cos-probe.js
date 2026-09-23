@@ -19,7 +19,7 @@
     const started = performance.now()
     const res = await fetch(BASE + path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: 'Bearer ' + (sessionStorage.getItem('token') || localStorage.getItem('token')) },
       body: new URLSearchParams(params || {}).toString(),
     })
     const text = await res.text()

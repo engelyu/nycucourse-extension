@@ -77,7 +77,7 @@ function load(cos) {
   const win = {}
   const ctx = {
     window: win, fetch: cos.fetchMock, performance: { now: () => 0 },
-    localStorage: { getItem: () => 'fake-token' }, console: { log() {}, warn() {}, error() {} },
+    sessionStorage: { getItem: () => null }, localStorage: { getItem: () => 'fake-token' }, console: { log() {}, warn() {}, error() {} },
     URLSearchParams, JSON, Math, Date, Object, Array, String, Number, Boolean, Set, Map, Error, Promise, setTimeout,
   }
   vm.createContext(ctx)
