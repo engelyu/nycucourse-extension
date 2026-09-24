@@ -238,3 +238,11 @@ body.resizing { cursor: col-resize; user-select: none; -webkit-user-select: none
 /* 選課系統暫停（分發時段）的橫幅：訊息是選課網原文，自帶暫停時間 */
 .sys-banner { flex-basis: 100%; margin: 6px 0 0; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--error); background: color-mix(in srgb, var(--error) 10%, Canvas); font-size: 13px; }
 .sys-banner[hidden] { display: none; }
+
+/* 自動登記分頁 */
+.auto-panel h3 { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
+.auto-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 6px 0; font-size: 13px; }
+.auto-row select { max-width: 100%; }
+.auto-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.auto-list li { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.auto-list li.failed { border-color: var(--error); color: var(--error); }
