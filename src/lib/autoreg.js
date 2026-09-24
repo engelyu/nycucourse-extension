@@ -80,3 +80,24 @@ export function summarizeResults(results) {
   const detail = list.map((r) => `${r.title} ${r.message}`).join('；')
   return `成功 ${ok} 門、失敗 ${list.length - ok} 門：${detail}`
 }
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+// 自動登記的時間顯示：「9/25 13:05」
+export function formatRunTime(ms) {
+  if (!ms) return ''
+  const d = new Date(ms)
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+// 清單裡的一門課：「515044 實變函數論(一)　第 2 志願」。沒有志願序的課送出後是登記或加選，
+// 看選課網對那門課的規則（lib/register.js regAction），這裡只寫「不需志願序」
+export function describeAutoItem(item, fallbackTitle = '') {
+  const title = (item && item.title) || fallbackTitle
+  return `${item.cosId} ${title}　${item.wish ? `第 ${item.wish} 志願` : '不需志願序'}`
+}
+
+// 執行紀錄一筆：「9/25 13:00　自動　成功 1 門、失敗 0 門：…」
+export function describeLogEntry(entry) {
+  return `${formatRunTime(entry.at)}　${entry.trigger === 'manual' ? '手動' : '自動'}　${entry.summary || entry.note}`
+}

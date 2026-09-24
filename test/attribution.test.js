@@ -282,3 +282,20 @@ test('restoreParams 用預排紀錄組回加入預排的參數', () => {
   assert.equal(restoreParams({ cos_id: '1' }).menu_data, '{}')
   assert.equal(restoreParams({ cos_id: '1' }).wType, 'X')
 })
+
+// 當期選課「查詢」裡的「變更採計」：列出這門課的採計方式，目前那一種不能再選
+import { attributionChoices, attributionKey } from '../src/lib/attribution.js'
+
+test('attributionChoices：目前的採計方式標 current，其他可以選', () => {
+  const home = { key: '2|X|', label: '選修', source: 'home' }
+  const core = { key: 'E|E|CAT-Z102', label: '核心・基本素養-量性推理', source: 'alt' }
+  const item = { cos_id: '112304', menu_data: '{&quot;type&quot;:1,&quot;dep_uid&quot;:&quot;DEP-MATH&quot;}', cos_type_code: '2', wType: 'X', category_type: '' }
+  assert.equal(attributionKey(item), '2|X|')
+  assert.deepEqual(attributionChoices([home, core], item).map((o) => [o.label, o.current]), [['選修', true], ['核心・基本素養-量性推理', false]])
+})
+
+test('attributionChoices：未指定（用空選單加入）的課每一種都能選', () => {
+  const item = { cos_id: '112304', menu_data: '{}', cos_type_code: '2', wType: 'X' }
+  assert.deepEqual(attributionChoices([{ key: '2|X|', label: '選修' }], item).map((o) => o.current), [false])
+  assert.deepEqual(attributionChoices(null, item), [])
+})
