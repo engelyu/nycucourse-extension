@@ -1,6 +1,6 @@
 // 找空堂課程：時段、空堂、比對與篩選。全部是純函式。
 // 時段 key 是 "<星期>-<節次代碼>"，星期 1–7（週一 = 1）。
-import { PERIODS, parseCosTime, DAY_NAMES } from './periods.js'
+import { PERIODS, parseCosTime, parseCosSegments, DAY_NAMES } from './periods.js'
 import { searchCourses } from './search.js'
 import { scheduleItems } from './schedule.js'
 
@@ -40,7 +40,8 @@ function parseCourseSlots(course) {
   const keys = unique(slots.map((s) => slotKey(s.day, s.period))).sort((a, b) => ORDER.get(a) - ORDER.get(b))
   return {
     keys,
-    campuses: unique(slots.map((s) => s.campus).filter(Boolean)),
+    // 校區要逐段算：兩個校區同時開教室的課，parseCosTime 只留第一段的校區
+    campuses: unique(parseCosSegments(course && course.time).map((s) => s.campus).filter(Boolean)),
     rooms: unique(slots.flatMap((s) => str(s.room).split('、')).filter(Boolean)),
   }
 }

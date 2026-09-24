@@ -1,6 +1,6 @@
 // 教室查詢的計算（純函式）。教室代碼來自課程時間字串，例如 M34-ED219[GF] 的 ED219。
 // 大樓名稱來自課程時間表的官方大樓表（lib/buildings.js）。規則見 docs/superpowers/specs/2026-09-24-room-lookup-design.md。
-import { PERIODS, parseCosTime } from './periods.js'
+import { PERIODS, parseCosSegments } from './periods.js'
 import { CAMPUSES } from './freeslots.js'
 
 const str = (v) => (v == null ? '' : String(v))
@@ -53,15 +53,13 @@ function inferCampus(code, buildings) {
   return hits.length === 1 ? hits[0] : ''
 }
 
-// 每間教室記下它的時段。時間字串要逐段（逗號分隔）解析：parseCosTime 會把同一時段不同段的教室合成
-// 「A302、YX216」並只留第一段的校區，兩個校區同時開教室的課（例如 R56-A302[GF],R56-YX216[YM]）就會歸錯校區。
+// 每間教室記下它的時段。逐段解析（parseCosSegments），兩個校區同時開教室的課每間教室才會歸到自己的校區；
 // 同一段裡列了多間教室（「、」）也每間各記一筆。
 export function buildRoomIndex(courses, buildings) {
   const rooms = new Map()
   const noRoom = []
   for (const course of courses || []) {
-    const segments = str(course && course.time).split(',')
-    for (const s of segments.flatMap((segment) => parseCosTime(segment))) {
+    for (const s of parseCosSegments(course && course.time)) {
       const codes = str(s.room).split('、').map((r) => r.trim()).filter(Boolean)
       if (!codes.length) {
         noRoom.push({ day: s.day, period: s.period, course })

@@ -209,3 +209,15 @@ test('freeOfSelected 沒有課表資料時全部都是空堂', () => {
   assert.deepEqual(freeOfSelected(null), ALL_SLOTS)
   assert.deepEqual(freeOfSelected({}), ALL_SLOTS)
 })
+
+// 兩個校區同時開教室的課要算兩個校區，篩任一個都找得到（生物化學 112900：光復 A302＋陽明 YX216）
+test('courseSlots 與校區篩選：兩個校區都有教室的課，兩個校區都算', () => {
+  const bio = { id: '112900', name: '生物化學', teacher: '', time: 'R56F34-A302[GF],R56F34-YX216[YM]', credit: '3', type: '必修', dep: '', deps: [], brief: '' }
+  const slots = courseSlots(bio)
+  assert.deepEqual(slots.campuses, ['GF', 'YM'])
+  assert.deepEqual(slots.rooms.sort(), ['A302', 'YX216'])
+  assert.deepEqual(slots.keys, ['4-5', '4-6', '5-3', '5-4'], '同一節不重複')
+  const selection = new Set(ALL_SLOTS)
+  assert.equal(findCourses([bio], { selection, mode: 'inside', campuses: ['YM'] }).total, 1, '篩陽明要找得到')
+  assert.equal(findCourses([bio], { selection, mode: 'inside', campuses: ['GF'] }).total, 1, '篩光復也找得到')
+})
