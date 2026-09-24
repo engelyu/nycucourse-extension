@@ -2,7 +2,7 @@
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
 import { ALL_SLOTS, freeOfSelected, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
-import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution, restoreParams } from './lib/attribution.js'
+import { findAttributionOptions, needsChoice, preregParams, courseDepUids, describeAttribution, restoreParams, attributionChoices } from './lib/attribution.js'
 import { resolveRegInfo, describeAvailability } from './lib/register.js'
 import { createRegisterDialog } from './reg-dialog.js'
 import { findCosTab, askCos, cosProblem } from './cos-tab.js'
@@ -260,6 +260,9 @@ function drawResults() {
     onAdd: addCourse,
     onQuery: queryCourse,
     onRegister: registerCourse,
+    onChangeAttribution: chooseAttribution,
+    onPickAttribution: pickAttribution,
+    onCancelAttribution: cancelAttribution,
     onChoose: (course, option) => submitAdd(course, option),
     onCancel: (course) => {
       addState.delete(course.id)
@@ -353,6 +356,48 @@ async function queryCourse(course) {
     if (err.reply && err.reply.reason === 'closed') showClosed(err.reply.detail)
     addState.set(course.id, { status: 'error', msg: errorText(err, '查詢失敗') })
   }
+  renderResults()
+}
+
+// ---------- 變更採計方式 ----------
+// 選課網依「從哪個選單加入預排」決定類別（例如選修或核心），要改只能移除後用新的選單加入。
+// content script 的 changepreregist 會先移除再加入，加不回去時用原本的參數還原。
+
+async function chooseAttribution(course) {
+  const s = addState.get(course.id)
+  if (!s) return
+  addState.set(course.id, { ...s, choosing: 'loading', attrError: '' })
+  renderResults()
+  try {
+    const options = attributionChoices(await attributionOptionsFor(course), preregItem(course.id))
+    const others = options.filter((o) => !o.current)
+    addState.set(course.id, { ...addState.get(course.id), choosing: others.length ? options : null, attrError: others.length ? '' : '這門課在選課網只有目前這一種採計方式' })
+  } catch (err) {
+    addState.set(course.id, { ...addState.get(course.id), choosing: null, attrError: errorText(err, '查詢採計方式失敗') })
+  }
+  renderResults()
+}
+
+async function pickAttribution(course, option) {
+  const item = preregItem(course.id)
+  if (!item) return
+  addState.set(course.id, { ...addState.get(course.id), choosing: 'saving', attrError: '' })
+  renderResults()
+  const reply = await askCos({ type: 'changepreregist', cosId: course.id, params: preregParams(course.id, option), previous: restoreParams(item) })
+  const result = reply && reply.ok ? reply.result : null
+  if (result && result.status === 'added') {
+    addState.set(course.id, { status: 'changed', msg: `採計已改為「${option.label}」` })
+  } else {
+    const msg = result ? `變更失敗：${result.msg || '未知錯誤'}` : needsCos(reply) ? '請先開啟並登入選課網' : cosProblem(reply)
+    addState.set(course.id, { ...addState.get(course.id), choosing: null, attrError: msg })
+  }
+  renderResults()
+  await syncStatus()
+}
+
+function cancelAttribution(course) {
+  const s = addState.get(course.id)
+  if (s) addState.set(course.id, { ...s, choosing: null, attrError: '' })
   renderResults()
 }
 
@@ -559,6 +604,9 @@ async function init() {
     queryState: (id) => addState.get(String(id)),
     onQuery: queryCourse,
     onRegister: registerCourse,
+    onChangeAttribution: chooseAttribution,
+    onPickAttribution: pickAttribution,
+    onCancelAttribution: cancelAttribution,
     onRemove: removeFromPrereg,
   })
   dialog = createRegisterDialog()
