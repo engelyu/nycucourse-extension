@@ -53,12 +53,15 @@ function inferCampus(code, buildings) {
   return hits.length === 1 ? hits[0] : ''
 }
 
-// 每間教室記下它的時段；同一時段列了多間教室（parseCosTime 用「、」串起來）就每間各記一筆
+// 每間教室記下它的時段。時間字串要逐段（逗號分隔）解析：parseCosTime 會把同一時段不同段的教室合成
+// 「A302、YX216」並只留第一段的校區，兩個校區同時開教室的課（例如 R56-A302[GF],R56-YX216[YM]）就會歸錯校區。
+// 同一段裡列了多間教室（「、」）也每間各記一筆。
 export function buildRoomIndex(courses, buildings) {
   const rooms = new Map()
   const noRoom = []
   for (const course of courses || []) {
-    for (const s of parseCosTime(course && course.time)) {
+    const segments = str(course && course.time).split(',')
+    for (const s of segments.flatMap((segment) => parseCosTime(segment))) {
       const codes = str(s.room).split('、').map((r) => r.trim()).filter(Boolean)
       if (!codes.length) {
         noRoom.push({ day: s.day, period: s.period, course })

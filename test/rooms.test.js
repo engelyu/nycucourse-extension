@@ -132,3 +132,18 @@ test('buildRoomIndex：時段沒有校區時，用大樓代碼推回唯一的校
   const zz = [...idx.rooms.values()].find((r) => r.code === 'ZZ101')
   assert.deepEqual([zz.key, zz.campus, zz.known], [':ZZ101', '', false])
 })
+
+// 2026-09-24 使用者回報：有些課同時在兩個校區開教室（實測 17 門），例如生物化學 R56F34-A302[GF],R56F34-YX216[YM]。
+// parseCosTime 會把同一時段的教室合成「A302、YX216」並只留第一段的校區，所以要逐段解析，每間教室用自己那段的校區。
+test('buildRoomIndex：同一時段在兩個校區都有教室，各自歸到自己的校區', () => {
+  const idx = buildRoomIndex([
+    course('112900', '生物化學', 'R56F34-A302[GF],R56F34-YX216[YM]'),
+    course('520030', '資料結構與演算法', 'T789-KB202[KS],T789-SC110[GF]'),
+  ], { ...BUILDINGS, KS: { KB: { cname: '高雄B棟' } }, GF: { ...BUILDINGS.GF, SC: { cname: '科學三館' } } })
+  assert.deepEqual([...idx.rooms.keys()].sort(), ['GF:A302', 'GF:SC110', 'KS:KB202', 'YM:YX216'])
+  assert.equal(idx.rooms.get('YM:YX216').slots.length, 4)
+  assert.equal(idx.rooms.get('GF:SC110').buildingName, '科學三館')
+  // 兩邊在同一時間都算上課中
+  assert.equal(roomStatus(idx.rooms.get('YM:YX216'), 4, 13 * 60 + 30).state, 'busy')
+  assert.equal(roomStatus(idx.rooms.get('GF:A302'), 4, 13 * 60 + 30).state, 'busy')
+})
