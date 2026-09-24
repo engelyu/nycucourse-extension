@@ -233,3 +233,10 @@ export function describeAttribution(item) {
   if (!menu || typeof menu !== 'object' || !Object.keys(menu).length) return '未指定'
   return optionLabel(item)
 }
+
+// 變更採計方式時列出的選項：目前的那一種標 current（不能再選）；
+// 未指定（舊版擴充功能用空選單加入）的課沒有「目前」，每一種都能選
+export function attributionChoices(options, item) {
+  const current = describeAttribution(item) === '未指定' ? '' : attributionKey(item)
+  return (options || []).map((option) => ({ ...option, current: option.key === current }))
+}

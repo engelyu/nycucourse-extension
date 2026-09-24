@@ -125,3 +125,23 @@ test('registerParams 丟例外時只有那一門失敗', async () => {
   assert.equal(results[1].ok, false)
   assert.match(results[1].message, /志願/)
 })
+
+// 自動登記分頁（從選課頁搬到當期選課）顯示用的文字
+import { formatRunTime, describeAutoItem, describeLogEntry } from '../src/lib/autoreg.js'
+
+test('formatRunTime：月/日 時:分，沒有時間回空字串', () => {
+  assert.equal(formatRunTime(new Date(2026, 8, 25, 13, 5).getTime()), '9/25 13:05')
+  assert.equal(formatRunTime(0), '')
+  assert.equal(formatRunTime(null), '')
+})
+
+test('describeAutoItem：課號、課名、志願；沒有志願序的寫「不需志願序」', () => {
+  assert.equal(describeAutoItem({ cosId: '515044', title: '實變函數論(一)', wish: '2' }), '515044 實變函數論(一)　第 2 志願')
+  assert.equal(describeAutoItem({ cosId: '515044', title: '', wish: '' }, '預排裡的課名'), '515044 預排裡的課名　不需志願序')
+})
+
+test('describeLogEntry：時間、手動或自動、結果', () => {
+  const at = new Date(2026, 8, 25, 13, 0).getTime()
+  assert.equal(describeLogEntry({ at, trigger: 'manual', summary: '', note: '選課系統暫停中：選課結束' }), '9/25 13:00　手動　選課系統暫停中：選課結束')
+  assert.equal(describeLogEntry({ at, trigger: 'alarm', summary: '成功 1 門、失敗 0 門：實變 已登記第 2 志願', note: '' }), '9/25 13:00　自動　成功 1 門、失敗 0 門：實變 已登記第 2 志願')
+})
