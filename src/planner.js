@@ -15,6 +15,7 @@ import { createSplitView } from './planner/split-view.js'
 import { createCrawlBar } from './planner/crawl-bar.js'
 import { createTimetable } from './planner/timetable.js'
 import { createCourseDetail } from './planner/course-detail.js'
+import { createAutoRegister } from './planner/auto-register.js'
 
 const $ = (sel) => document.querySelector(sel)
 const VALID = new Set(ALL_SLOTS)
@@ -26,7 +27,7 @@ const state = {
   filters: { ...DEFAULT_FILTERS },
   schedule: { sources: {}, manual: [], overrides: {} },
   courseData: null,
-  paneTab: 'preview', // 右欄目前的 tab：preview（課表預覽）或 filters（篩選設定）
+  paneTab: 'preview', // 右欄目前的 tab：preview（課表預覽）、filters（篩選設定）或 auto（自動登記）
   split: undefined, // 左欄佔的寬度比例，沒調過就用預設
 }
 const addState = new Map() // 課號 -> { status: 'pending'|'choose'|'added'|'exists'|'error', ... }
@@ -35,6 +36,7 @@ let timetable = null
 let deptPicker = null
 let depTree = null
 let tabs = null
+let auto = null
 
 const courses = () => (state.courseData && state.courseData.courses) || []
 
@@ -50,7 +52,7 @@ function restore(saved) {
   if (!saved || typeof saved !== 'object') return
   if (Array.isArray(saved.selection)) state.selection = new Set(saved.selection.filter((k) => VALID.has(k)))
   if (saved.filters && typeof saved.filters === 'object') state.filters = { ...DEFAULT_FILTERS, ...saved.filters }
-  if (saved.paneTab === 'preview' || saved.paneTab === 'filters') state.paneTab = saved.paneTab
+  if (['preview', 'filters', 'auto'].includes(saved.paneTab)) state.paneTab = saved.paneTab
   if (Number.isFinite(saved.split)) state.split = saved.split
 }
 
@@ -564,6 +566,7 @@ async function init() {
     tabs: {
       preview: { tab: $('#tab-preview'), panel: $('#panel-preview') },
       filters: { tab: $('#tab-filters'), panel: $('#panel-filters') },
+      auto: { tab: $('#tab-auto'), panel: $('#panel-auto') },
     },
     initial: state.paneTab,
     onChange: (id) => {
@@ -587,6 +590,14 @@ async function init() {
     e.preventDefault()
     detail.close()
   })
+  auto = createAutoRegister($('#panel-auto'), {
+    courses: () => ((state.schedule.sources || {}).preregist || {}).courses || [],
+    onRan: async () => {
+      statusMessage = await syncStatus()
+      render()
+    },
+  })
+  auto.load()
   const crawl = createCrawlBar($('#crawl'))
   crawl.load()
   askCos({ type: 'semester' }).then((reply) => crawl.setCosSemester(reply && reply.ok ? reply.semester : null))
@@ -630,6 +641,7 @@ async function init() {
       buildFilters()
     }
     if (changes.schedule || changes.courseData) render()
+    if (changes.schedule && auto) auto.render()
   })
   render()
   checkRegStatus()
