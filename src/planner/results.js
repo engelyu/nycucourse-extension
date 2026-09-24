@@ -71,13 +71,14 @@ function card(hit, ctx) {
     actions.append(span('ok', s.msg))
   } else if (!s || s.status !== 'choose') {
     if (s && s.status === 'added') actions.append(span('ok', `已加入${s.note ? `・${s.note}` : ''}`))
+    if (s && s.status === 'changed') actions.append(span('ok', s.msg))
     if (s && s.status === 'error') actions.append(span('error', s.msg))
     if (!inPrereg) actions.append(button('加入預排', '加入預排（有多種採計方式時會先讓你選）', () => ctx.onAdd(course)))
     actions.append(button(s && s.status === 'queried' ? '重新查詢' : '查詢', '查詢能不能加選、人數與衝堂', () => ctx.onQuery(course)))
   }
   li.append(info, actions)
 
-  const rows = renderQueryRows(course, s, status, (c, row) => ctx.onRegister(c, row))
+  const rows = renderQueryRows(course, s, status, ctx)
   if (rows) li.append(rows)
 
   if (s && s.status === 'choose') {
@@ -103,11 +104,15 @@ function card(hit, ctx) {
   return li
 }
 
-// 查詢結果：每種採計方式一列，能選的附「加選／登記／改志願」按鈕（結果卡片與詳情小卡共用）
-export function renderQueryRows(course, s, status, onRegister) {
+// 查詢結果：每種採計方式一列，能選的附「加選／登記／改志願」按鈕（結果卡片與詳情小卡共用）。
+// 已在預排、還沒登記的課可以「變更採計」：列出其他採計方式，選了就移除再用新的選單加入（失敗會還原）。
+// handlers：{ onRegister(course, row), onChangeAttribution(course), onPickAttribution(course, option), onCancelAttribution(course) }
+export function renderQueryRows(course, s, status, handlers) {
   if (!(s && s.status === 'queried' && !(status && status.state === 'registered'))) return null
   const box = document.createElement('div')
   box.className = 'query-rows'
+  // 已登記或已選上的課，採計在登記時就定了，改預排不會改到正式選課，所以不提供
+  const canChange = !(status && (status.state === 'registered' || status.state === 'wish'))
   for (const row of s.rows) {
     const r = document.createElement('div')
     r.className = 'query-row'
@@ -121,11 +126,47 @@ export function renderQueryRows(course, s, status, onRegister) {
       b.textContent = status && status.state === 'wish' && a.needsWish ? '改志願' : ACTION_LABELS[a.action]
       b.title = row.inPrereg ? '開啟確認視窗' : '先加入預排，再開啟確認視窗'
       b.disabled = Boolean(s.busy)
-      b.addEventListener('click', () => onRegister(course, row))
+      b.addEventListener('click', () => handlers.onRegister(course, row))
       r.append(b)
     }
+    if (row.inPrereg && canChange) r.append(changeButton(course, s, handlers))
     box.append(r)
   }
+  if (Array.isArray(s.choosing)) box.append(attributionPicker(course, s.choosing, handlers))
+  if (s.attrError) box.append(span('error', s.attrError))
+  return box
+}
+
+function changeButton(course, s, handlers) {
+  const b = document.createElement('button')
+  b.type = 'button'
+  b.className = 'link change-attribution'
+  b.textContent = s.choosing === 'loading' ? '查詢採計方式…' : s.choosing === 'saving' ? '變更中…' : '變更採計'
+  b.title = '選課網依加入預排時的選單決定類別（例如選修或核心），要改只能移除後重新加入；失敗會還原'
+  b.disabled = Boolean(s.busy) || Boolean(s.choosing)
+  b.addEventListener('click', () => handlers.onChangeAttribution(course))
+  return b
+}
+
+function attributionPicker(course, options, handlers) {
+  const box = document.createElement('div')
+  box.className = 'choices attribution-choices'
+  box.append('改成：')
+  for (const option of options) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = option.label
+    b.disabled = option.current
+    b.title = option.current ? '目前的採計方式' : `改成「${option.label}」`
+    b.addEventListener('click', () => handlers.onPickAttribution(course, option))
+    box.append(b)
+  }
+  const cancel = document.createElement('button')
+  cancel.type = 'button'
+  cancel.className = 'link'
+  cancel.textContent = '取消'
+  cancel.addEventListener('click', () => handlers.onCancelAttribution(course))
+  box.append(cancel)
   return box
 }
 

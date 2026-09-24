@@ -110,7 +110,7 @@ export function createCourseDetail(dialog, ctx) {
     }
     dialog.append(actions)
     if (course) {
-      const rows = renderQueryRows(course, ctx.queryState(item.cosId), status, (c, row) => ctx.onRegister(c, row))
+      const rows = renderQueryRows(course, ctx.queryState(item.cosId), status, ctx)
       if (rows) dialog.append(rows)
     }
   }
