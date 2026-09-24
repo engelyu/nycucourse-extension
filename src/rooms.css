@@ -1,0 +1,37 @@
+/* 教室查詢頁。共用樣式在 planner.css（頁首、兩欄各自捲動、週課表 .tt-*）。 */
+.rooms-head { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; }
+.rooms-head .controls { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; font-size: 13px; }
+.rooms-head .field { display: inline-flex; gap: 6px; align-items: center; }
+.row-label { color: var(--muted); font-size: 12px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 4px; }
+.toggles button { font-size: 12px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: inherit; }
+.toggles button[aria-pressed="true"] { background: var(--sel); border-color: var(--accent); font-weight: 600; }
+.toggles button small { color: var(--muted); margin-left: 4px; }
+.notice { margin: 0; font-size: 12px; color: var(--muted); }
+.notice #no-room { margin-left: 6px; }
+
+/* 兩欄：左右固定比例，不做拖曳分隔線（planner.css 的 .layout 預設有分隔線那一欄） */
+.rooms-layout { grid-template-columns: minmax(0, 1fr) minmax(480px, 1fr); gap: 16px; }
+
+/* 找教室 */
+.room-search { position: relative; }
+#room-q { width: 200px; padding: 4px 8px; font: inherit; }
+.room-matches { position: absolute; z-index: 5; list-style: none; margin: 2px 0 0; padding: 4px; min-width: 260px; max-height: 260px; overflow-y: auto; background: Canvas; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, .15); }
+.room-matches[hidden] { display: none; }
+.room-matches button { display: block; width: 100%; text-align: left; border: none; background: none; padding: 3px 6px; color: inherit; }
+.room-matches button:hover, .room-matches button:focus-visible { background: var(--sel); }
+
+/* 教室列表 */
+#room-list h2 { font-size: 15px; margin: 12px 0 4px; }
+#room-list h3 { font-size: 12px; color: var(--muted); margin: 8px 0 4px; font-weight: 600; }
+.room-row { display: flex; gap: 10px; align-items: baseline; width: 100%; margin: 0 0 4px; padding: 6px 10px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; }
+.room-row:hover { border-color: var(--accent); }
+.room-row[aria-current="true"] { border-color: var(--accent); background: var(--sel); }
+.room-row .code { min-width: 72px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.room-row .badge { --c: var(--muted); flex: none; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 18%, Canvas); }
+.room-row.busy .badge { --c: #D55E00; }
+.room-row.free .badge { --c: #009E73; }
+.room-row .what { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+.room-head h2 { margin: 4px 0 2px; font-size: 16px; }
+.room-head p { margin: 0 0 8px; font-size: 13px; }

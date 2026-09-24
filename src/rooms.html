@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>教室查詢</title>
+  <link rel="stylesheet" href="planner.css">
+  <link rel="stylesheet" href="rooms.css">
+</head>
+<body>
+  <header class="page-head rooms-head">
+    <h1>教室查詢</h1>
+    <div class="controls">
+      <label class="field">校區 <select id="campus" aria-label="校區"></select></label>
+      <div class="field" role="group" aria-label="時間">
+        <span class="row-label">時間</span>
+        <label><input type="radio" name="mode" value="now"> 現在 <span id="now-text" class="muted"></span></label>
+        <label><input type="radio" name="mode" value="custom"> 指定</label>
+        <select id="day" aria-label="星期"></select>
+        <input id="time" type="time" aria-label="時間" step="60">
+      </div>
+      <div class="room-search">
+        <input id="room-q" type="search" placeholder="找教室：例如 ED219" aria-label="找教室" autocomplete="off">
+        <ul id="room-matches" class="room-matches" hidden></ul>
+      </div>
+    </div>
+    <div class="chip-row"><span class="row-label">大樓</span><div id="buildings" class="toggles"></div></div>
+    <div class="chip-row">
+      <span class="row-label">樓層</span><div id="floors" class="toggles"></div>
+      <span class="row-label">顯示</span>
+      <label><input type="radio" name="show" value="all"> 全部</label>
+      <label><input type="radio" name="show" value="free"> 只看沒排課</label>
+      <label><input type="radio" name="show" value="busy"> 只看上課中</label>
+    </div>
+    <p class="notice">只根據課程資料：考試、演講、教室借用不在內，「沒有排課」不代表一定沒人。<span id="no-room"></span></p>
+  </header>
+  <main class="layout rooms-layout">
+    <section class="results-pane" aria-label="教室列表"><div id="room-list"></div></section>
+    <section class="plan-pane" aria-label="教室週課表">
+      <div id="room-head" class="room-head"><p class="muted">點左邊的教室，或在上方「找教室」輸入代碼，看它的一週課表。</p></div>
+      <p id="room-note" class="muted hidden-note" hidden></p>
+      <div id="room-week" class="timetable"></div>
+    </section>
+  </main>
+  <script type="module" src="rooms.js"></script>
+</body>
+</html>

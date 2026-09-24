@@ -6,6 +6,7 @@ function openPage(path) {
 }
 
 document.getElementById('btn-planner').addEventListener('click', () => openPage('src/planner.html'))
+document.getElementById('btn-rooms').addEventListener('click', () => openPage('src/rooms.html'))
 document.getElementById('btn-schedule').addEventListener('click', () => openPage('src/schedule.html'))
 document.getElementById('btn-register').addEventListener('click', () => openPage('src/register.html'))
 mount(document.getElementById('week'))
