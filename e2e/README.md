@@ -8,9 +8,20 @@
     npm install
     npx playwright-core install chromium
 
-執行（參數是擴充功能資料夾，通常是 repo 根目錄）：
+全部跑一次（在 `e2e/` 裡）：
 
-    node rooms.mjs ..
+    npm test
+
+只跑一支（參數是擴充功能資料夾，預設是上一層的 repo 根目錄）：
+
+    node rooms.mjs
+
+| 腳本 | 測什麼 |
+|---|---|
+| `rooms.mjs` | 教室查詢：大樓與樓層分組、上課中／沒有排課到幾點、指定時間、找教室、`?room=`、大樓 API 壞掉時照常能用 |
+| `planner-layout.mjs` | 當期選課：全選／空堂／清除、左右分割（最小寬度、鍵盤、記住寬度）、分頁、窄視窗上下排、更新課程資料；popup 只留課表、紅線只在今天 |
+| `planner-scroll.mjs` | 當期選課：寬視窗左右兩欄各自捲動、系所搜尋按 Enter（含注音選字）沒有作用 |
+| `session-token.mjs` | 選課網權杖在 sessionStorage、開好幾個選課網分頁時挑已登入的；選課結束後改讀本學期選課結果 |
 
 每支腳本最後印 `PASS` 或 `FAIL`，失敗時結束碼是 1。截圖存在 `e2e/shots/`（不進 git）。
 注意：新版 Playwright 的 headless shell 不能載入擴充功能，腳本都用 `channel: 'chromium'`。
