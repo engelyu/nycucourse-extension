@@ -1,4 +1,4 @@
-// 加選／登記的確認視窗，選課頁與當期選課頁共用。只有使用者按「送出加選／送出登記」才會送出。
+// 加選／登記的確認視窗（當期選課頁用）。只有使用者按「送出加選／送出登記」才會送出。
 // 按鈕寫出具體動作、不預設焦點在送出（NN/g 確認視窗準則）。
 import { wishOptions, wishLimitReached, registerParams, parseRegResult, ACTION_LABELS } from './lib/register.js'
 

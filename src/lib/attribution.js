@@ -221,7 +221,7 @@ export function defaultOption(options) {
   return (options && options[0]) || null
 }
 
-// 預排資料目前的採計方式，給選課頁顯示
+// 預排資料目前的採計方式，給當期選課的查詢結果顯示
 export function describeAttribution(item) {
   const raw = str(item && item.menu_data).replace(/&quot;/g, '"').trim()
   let menu = null
