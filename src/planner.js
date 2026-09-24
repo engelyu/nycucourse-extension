@@ -1,4 +1,4 @@
-// 當期選課頁（目前只有「找空堂課程」）。狀態：選取的時段與篩選條件，存在 storage 的 planner。
+// 當期選課頁：找課、加入預排、查詢／加選／登記、變更採計、自動登記。狀態（時段、篩選、分頁、寬度）存在 storage 的 planner。
 import { scheduleItems, withSyncedSources } from './lib/schedule.js'
 import { courseStatuses, occupiedKinds, KIND_COLORS, KIND_LABELS } from './lib/status.js'
 import { ALL_SLOTS, freeOfSelected, findCourses, RESULT_LIMIT, CAMPUSES, CATEGORIES, SORT_OPTIONS, hasBriefData, depCounts, courseSlots, describeKeys, appliedFilters, withoutFilter, facetCounts, relaxations, appliedCount } from './lib/freeslots.js'
@@ -512,7 +512,7 @@ function renderLegend(legend) {
       const dot = document.createElement('i')
       dot.style.background = KIND_COLORS[kind]
       const mark = { registered: '✓ ', wish: '①登 ', preregist: '預 ', manual: '' }[kind]
-      item.append(dot, `${mark}${label}`, kind === 'manual' ? '（顏色可在課表頁設定）' : '')
+      item.append(dot, `${mark}${label}`, kind === 'manual' ? '（在「編輯課表」新增、設定顏色）' : '')
       return item
     }),
   )

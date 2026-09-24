@@ -23,6 +23,7 @@
 | `planner-scroll.mjs` | 當期選課：寬視窗左右兩欄各自捲動、系所搜尋按 Enter（含注音選字）沒有作用 |
 | `planner-auto.mjs` | 當期選課的自動登記分頁：加入清單、開關與時間、立刻執行一次（選課結束時不送出）、移除、記住分頁 |
 | `planner-attribution.mjs` | 查詢裡的變更採計：選修改核心、加不回去時還原、已登記的課不提供 |
+| `pages.mjs` | popup 頁首三個按鈕、編輯課表頁、選課頁已拿掉、當期選課三個分頁 |
 | `session-token.mjs` | 選課網權杖在 sessionStorage、開好幾個選課網分頁時挑已登入的；選課結束後改讀本學期選課結果 |
 
 每支腳本最後印 `PASS` 或 `FAIL`，失敗時結束碼是 1。截圖存在 `e2e/shots/`（不進 git）。
