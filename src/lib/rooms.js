@@ -46,6 +46,13 @@ export function floorsOf(rooms) {
   return [...new Set((rooms || []).map((r) => r.floor))].sort((a, b) => floorRank(a) - floorRank(b))
 }
 
+// 時段沒有校區標記時（實測有 YEC109、YK533 這類沒寫 [YM] 的），用大樓代碼推回校區；
+// 只有一個校區有這個大樓代碼才推，推不出來就留空白
+function inferCampus(code, buildings) {
+  const hits = Object.keys(buildings || {}).filter((campus) => Object.keys(buildings[campus]).some((b) => code.startsWith(b)))
+  return hits.length === 1 ? hits[0] : ''
+}
+
 // 每間教室記下它的時段；同一時段列了多間教室（parseCosTime 用「、」串起來）就每間各記一筆
 export function buildRoomIndex(courses, buildings) {
   const rooms = new Map()
@@ -58,8 +65,9 @@ export function buildRoomIndex(courses, buildings) {
         continue
       }
       for (const code of codes) {
-        const key = `${s.campus}:${code}`
-        if (!rooms.has(key)) rooms.set(key, { key, ...parseRoom(code, s.campus, buildings), slots: [] })
+        const campus = s.campus || inferCampus(code, buildings)
+        const key = `${campus}:${code}`
+        if (!rooms.has(key)) rooms.set(key, { key, ...parseRoom(code, campus, buildings), slots: [] })
         rooms.get(key).slots.push({ day: s.day, period: s.period, course })
       }
     }

@@ -122,3 +122,13 @@ test('periodAt、nowPoint、formatMinute', () => {
   assert.deepEqual(nowPoint(new Date(2026, 8, 27, 9, 5)), { day: 7, minute: 545 }) // 週日
   assert.deepEqual([formatMinute(640), formatMinute(0), formatMinute(930)], ['10:40', '00:00', '15:30'])
 })
+
+// 2026-09-24 用真實資料驗證時發現：有些時段有教室但沒有校區標記（例如 `YEC109`、`YK533` 沒寫 [YM]）。
+// 校區空白的教室不會出現在任何校區清單；從教室代碼推回校區：只有一個校區有這個大樓代碼時才推。
+test('buildRoomIndex：時段沒有校區時，用大樓代碼推回唯一的校區', () => {
+  const idx = buildRoomIndex([course('800001', '沒寫校區', 'R34-YEC109'), course('800002', '推不出來', 'R34-ZZ101')], BUILDINGS)
+  const yec = [...idx.rooms.values()].find((r) => r.code === 'YEC109')
+  assert.deepEqual([yec.key, yec.campus, yec.building, yec.known], ['YM:YEC109', 'YM', 'YE', true])
+  const zz = [...idx.rooms.values()].find((r) => r.code === 'ZZ101')
+  assert.deepEqual([zz.key, zz.campus, zz.known], [':ZZ101', '', false])
+})
