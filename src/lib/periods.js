@@ -77,6 +77,12 @@ export function parseCosTime(text) {
   return out
 }
 
+// 逐段（逗號分隔）解析，每個時段保留自己那段的教室與校區；同一節可能出現不只一次。
+// 兩個校區同時開教室的課（例如 R56-A302[GF],R56-YX216[YM]）要靠它：parseCosTime 會把同一節的教室合成一格、只留第一段的校區。
+export function parseCosSegments(text) {
+  return String(text ?? '').split(',').flatMap((segment) => parseCosTime(segment))
+}
+
 // 把時段整理成「一 5-6、三 3-4」這種文字
 export function describeSlots(slots) {
   const byDay = new Map()

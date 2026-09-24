@@ -77,3 +77,17 @@ test('describeSlots 把連續節次併成一段文字', () => {
   assert.equal(describeSlots(parseCosTime('F2-ED220[GF],Tn56-EDB26[GF]')), '二 N-6、五 2')
   assert.equal(describeSlots([]), '')
 })
+
+// 兩個校區同時開教室的課（2026-09-24 實測 17 門）：parseCosTime 會把同一時段的教室合成一格、只留第一段的校區。
+// parseCosSegments 逐段解析，每個時段保留自己那段的教室與校區（同一節會出現不只一次）。
+import { parseCosSegments } from '../src/lib/periods.js'
+
+test('parseCosSegments：每段各自保留教室與校區', () => {
+  assert.deepEqual(parseCosSegments('R5-A302[GF],R5-YX216[YM]'), [
+    { day: 4, period: '5', room: 'A302', campus: 'GF' },
+    { day: 4, period: '5', room: 'YX216', campus: 'YM' },
+  ])
+  assert.deepEqual(parseCosSegments('M34-ED219[GF]'), parseCosTime('M34-ED219[GF]'), '只有一段時和 parseCosTime 一樣')
+  assert.deepEqual(parseCosSegments(''), [])
+  assert.deepEqual(parseCosSegments(null), [])
+})
