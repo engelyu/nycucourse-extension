@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   parseRoom, floorLabel, buildRoomIndex, roomSessions, roomStatus, noRoomCount,
   floorsOf, matchRooms, buildingsOf, campusesOf, periodAt, nowPoint, formatMinute,
+  describeStatus, roomRows,
 } from '../src/lib/rooms.js'
 
 // 官方大樓表（節錄）
@@ -146,4 +147,27 @@ test('buildRoomIndex：同一時段在兩個校區都有教室，各自歸到自
   // 兩邊在同一時間都算上課中
   assert.equal(roomStatus(idx.rooms.get('YM:YX216'), 4, 13 * 60 + 30).state, 'busy')
   assert.equal(roomStatus(idx.rooms.get('GF:A302'), 4, 13 * 60 + 30).state, 'busy')
+})
+
+// 2026-09-28：教室列表的篩選、排序、分組抽成 roomRows，給教室查詢頁與 popup 共用
+test('roomRows：校區、大樓、樓層、顯示篩選；照大樓、樓層、代碼排序', () => {
+  const at = { day: 4, minute: 700 } // 週四 11:40
+  const codes = (opts) => roomRows(index, { campus: 'GF', buildings: ['ED', 'EC'], floors: [], show: 'all', ...opts }, at).map((r) => r.room.code)
+  assert.deepEqual(codes(), ['EC022', 'EC315', 'ED219', 'ED220'], '大樓照 buildingsOf 的順序，不是選的順序')
+  assert.deepEqual(codes({ buildings: [] }), [], '沒選大樓就沒有')
+  assert.deepEqual(codes({ floors: ['2'] }), ['ED219', 'ED220'])
+  assert.deepEqual(codes({ show: 'busy' }), ['EC022', 'ED219', 'ED220'])
+  assert.deepEqual(codes({ show: 'free' }), ['EC315'])
+  assert.deepEqual(codes({ campus: 'YM', buildings: ['YT'] }), ['YT206'])
+  const ed219 = roomRows(index, { campus: 'GF', buildings: ['ED'], floors: [], show: 'busy' }, at)[0]
+  assert.equal(ed219.status.state, 'busy')
+})
+
+test('describeStatus：同時好幾門課全部寫出來', () => {
+  const busy = describeStatus(roomStatus(room('GF:ED219'), 4, 700))
+  assert.equal(busy.badge, '上課中')
+  assert.deepEqual(busy.courses.map((c) => c.name).sort(), ['午間課', '合開'])
+  assert.equal(busy.text, `${busy.courses.map((c) => `${c.name}・王老師`).join('／')}・到 13:10`)
+  assert.deepEqual(describeStatus(roomStatus(room('GF:EC022'), 4, 725)), { badge: '沒有排課', courses: [], text: '到 15:30 前沒有排課' })
+  assert.deepEqual(describeStatus(roomStatus(room('GF:EC022'), 4, 1000)), { badge: '沒有排課', courses: [], text: '今天之後沒有排課' })
 })

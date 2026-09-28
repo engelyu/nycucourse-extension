@@ -157,12 +157,11 @@ const pop = await popup.evaluate(() => {
   return {
     text: document.body.innerText,
     hasSearch: Boolean(document.querySelector('input[type="search"]')),
-    hasTabs: Boolean(document.querySelector('[role="tab"]')),
     line: a && { left: a.left, width: a.width, top: a.top },
     today: b && { left: b.left, width: b.width, text: today.textContent },
   }
 })
-checks['popup 沒有加入預排、沒有搜尋、沒有 tab'] = !pop.text.includes('加入預排') && !pop.hasSearch && !pop.hasTabs
+checks['popup 沒有加入預排、沒有搜尋'] = !pop.text.includes('加入預排') && !pop.hasSearch
 checks['紅線只在今天那一欄'] = Boolean(pop.line && pop.today) && Math.abs(pop.line.left - pop.today.left) <= 1 && Math.abs(pop.line.width - pop.today.width) <= 1
 await popup.screenshot({ path: SHOTS + '5-popup.png' })
 

@@ -7,14 +7,17 @@
 </head>
 <body>
   <header class="shell">
-    <h1>課表</h1>
+    <h1 class="tabs" role="tablist" aria-label="小視窗分頁">
+      <button id="tab-week" type="button" role="tab" aria-controls="week" aria-selected="true">課表</button>
+      <button id="tab-rooms" type="button" role="tab" aria-controls="rooms" aria-selected="false">教室現況</button>
+    </h1>
     <span class="shell-actions">
       <button id="btn-planner" type="button" title="開啟當期選課">當期選課 ↗</button>
       <button id="btn-rooms" type="button" title="開啟教室查詢">教室 ↗</button>
       <button id="btn-schedule" type="button" title="新增私人行程、設定課程連結與顏色">編輯課表 ↗</button>
     </span>
   </header>
-  <main id="week">
+  <main id="week" role="tabpanel" aria-labelledby="tab-week">
     <div class="mini-week" role="grid" aria-label="本週課表"></div>
     <div class="detail" hidden></div>
     <p class="empty" hidden>
@@ -23,6 +26,19 @@
       <button type="button" data-action="sync">從選課網同步</button>
     </p>
     <p class="updated"><span class="updated-at"></span><button type="button" class="link" data-action="sync">從選課網更新</button></p>
+  </main>
+  <main id="rooms" class="quick-rooms" role="tabpanel" aria-labelledby="tab-rooms" hidden>
+    <div class="qr-controls">
+      <select class="qr-campus" aria-label="校區"></select>
+      <span class="qr-now muted"></span>
+      <span class="qr-show" role="group" aria-label="顯示">
+        <label><input type="radio" name="qr-show" value="free"> 沒排課</label>
+        <label><input type="radio" name="qr-show" value="busy"> 上課中</label>
+      </span>
+    </div>
+    <div class="qr-buildings" aria-label="大樓"></div>
+    <div class="qr-list"></div>
+    <p class="qr-notice">只根據課程資料，「沒有排課」不代表一定沒人。點教室看一週課表。</p>
   </main>
 
   <script type="module" src="popup.js"></script>

@@ -48,6 +48,9 @@ await sw.evaluate((courseData) => chrome.storage.local.set({ courseData }), {
     course('700003', '第三節', 'R3-ED301[GF]'),
     course('700004', '沒有教室', 'R34-'),
     course('700005', '陽明的課', 'R34-YT206[YM]'),
+    // 同一間教室同一時段兩門課（合開），課名很長：列表與週課表都要完整寫出來
+    course('700006', '跨領域合開：資料科學與人工智慧應用專題（大學部）', 'R34-EC022[GF]'),
+    course('700007', '週三合開的另一門很長的課程名稱：計算思維', 'W34-ED219[GF]'),
   ],
 })
 
@@ -115,6 +118,20 @@ checks['選定時間（週四第 6 節）的格子標亮'] = await page.$eval('#
 checks['選中的那一列有標示'] = (await page.getAttribute('.room-row[aria-current="true"]', 'data-key')) === 'GF:ED220'
 await page.screenshot({ path: SHOTS + 'rooms-2-room.png' })
 
+// ---- 重疊的課全部寫出來 ----
+await page.check('input[name="mode"][value="now"]')
+const fits = (sel) => page.$$eval(sel, (els) => els.length > 0 && els.every((e) => e.scrollWidth <= e.clientWidth + 1 && getComputedStyle(e).textOverflow !== 'ellipsis'))
+const ec022 = await rowOf('EC022')
+checks['列表：EC022 同時兩門課都完整寫出'] = ec022.includes('電腦動畫與特效・王老師') && ec022.includes('跨領域合開：資料科學與人工智慧應用專題（大學部）・王老師')
+checks['列表：狀態文字沒有被截掉'] = await fits('.room-row .what')
+await page.fill('#room-q', 'ED219')
+await page.click('#room-matches button >> nth=0')
+const wed = await page.$$eval('#room-week .tt-cell[data-key="3-3"] .tt-course .name, #room-week .tt-cell[data-key="3-4"] .tt-course .name', (ns) => ns.map((n) => n.textContent))
+checks['週課表：同一節兩門課，接續的節次也寫課名'] = JSON.stringify(wed.slice().sort()) === JSON.stringify(['週三合開的另一門很長的課程名稱：計算思維', '週三合開的另一門很長的課程名稱：計算思維', '週三的課', '週三的課'].sort())
+checks['週課表：課名沒有被截掉'] = await fits('#room-week .tt-course .name')
+checks['週課表：沒有只剩色條的接續格'] = (await page.$$('#room-week .tt-course.cont')).length === 0
+await page.screenshot({ path: SHOTS + 'rooms-3-overlap.png' })
+
 // ---- 網址帶教室 ----
 // 時間模式會存進 storage，先切回「現在」（週四 10:40，EC022 上課中），新開的頁面才看得到上課中的課與大綱連結
 await page.check('input[name="mode"][value="now"]')
@@ -129,10 +146,37 @@ checks['右欄狀態列有課程大綱連結'] = (await direct.getAttribute('#ro
 // ---- 寬視窗整頁不捲動 ----
 checks['寬視窗整頁不捲動'] = await page.evaluate(() => document.scrollingElement.scrollHeight <= window.innerHeight + 1)
 
-// ---- popup 入口 ----
+// ---- popup：入口與教室現況分頁（簡化版，不出現「空教室」） ----
 const popup = await ctx.newPage()
+popup.on('pageerror', (e) => errors.push(`popup: ${e}`))
+await popup.setViewportSize({ width: 420, height: 600 })
+await popup.clock.setFixedTime(new Date('2026-09-24T10:40:00+08:00'))
 await popup.goto(`chrome-extension://${extId}/src/popup.html`)
 checks['popup 有「教室 ↗」'] = (await popup.textContent('#btn-rooms')) === '教室 ↗'
+checks['popup 預設是課表分頁'] = !(await popup.isHidden('#week')) && (await popup.isHidden('#rooms'))
+await popup.click('#tab-rooms')
+await popup.waitForSelector('.qr-buildings button')
+const qrCodes = () => popup.$$eval('.qr-row .code', (cs) => cs.map((c) => c.textContent).join(','))
+checks['popup 教室現況：跟教室查詢共用選的大樓'] = JSON.stringify(await popup.$$eval('.qr-buildings button[aria-pressed="true"]', (bs) => bs.map((b) => b.dataset.code))) === '["EC","ED"]'
+checks['popup 教室現況：顯示現在時間'] = (await popup.textContent('.qr-now')).includes('週四 10:40')
+checks['popup 教室現況：預設只列沒排課的'] = (await qrCodes()) === 'ED219,ED220'
+checks['popup 教室現況：分組標題有大樓與樓層'] = (await popup.$$eval('.qr-list h3', (hs) => hs.map((h) => h.textContent))).includes('工程四館・2 樓')
+await popup.check('input[name="qr-show"][value="busy"]')
+checks['popup 上課中：列出上課中的教室'] = (await qrCodes()) === 'EC022,ED301'
+const qrEc = await popup.textContent('.qr-row[data-key="GF:EC022"] .what')
+checks['popup 上課中：同時兩門課都寫出來'] = qrEc.includes('電腦動畫與特效') && qrEc.includes('跨領域合開：資料科學與人工智慧應用專題（大學部）')
+checks['popup 教室現況：不出現「空教室」'] = !(await popup.textContent('body')).includes('空教室')
+checks['popup 沒有橫向捲動'] = await popup.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth)
+await popup.screenshot({ path: SHOTS + 'rooms-4-popup.png' })
+const [opened] = await Promise.all([ctx.waitForEvent('page'), popup.click('.qr-row[data-key="GF:EC022"]')])
+await opened.waitForLoadState()
+checks['popup 點教室開教室查詢看週課表'] = opened.url().endsWith('/src/rooms.html?room=EC022')
+await popup.click('.qr-buildings button[data-code="EC"]')
+const stored = await sw.evaluate(() => chrome.storage.local.get('rooms'))
+checks['popup 改大樓會存回教室查詢的設定'] = JSON.stringify(stored.rooms.buildings) === '["ED"]' && stored.rooms.mode === 'now'
+await popup.reload()
+await popup.waitForSelector('.qr-buildings button')
+checks['popup 記住上次開的分頁與顯示'] = (await popup.isHidden('#week')) && (await popup.isChecked('input[name="qr-show"][value="busy"]'))
 
 checks['大樓 API 有被呼叫'] = buildingHits >= 2
 checks['沒有頁面錯誤'] = errors.length === 0
