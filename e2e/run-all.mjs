@@ -5,7 +5,7 @@ import { readdirSync } from 'node:fs'
 
 const ext = process.argv[2] || '..'
 const here = new URL('.', import.meta.url).pathname
-const scripts = readdirSync(here).filter((f) => f.endsWith('.mjs') && f !== 'run-all.mjs').sort()
+const scripts = readdirSync(here).filter((f) => f.endsWith('.mjs') && f !== 'run-all.mjs' && f !== 'store-shots.mjs').sort()
 const results = scripts.map((f) => {
   const started = Date.now()
   const r = spawnSync(process.execPath, [f, ext], { cwd: here, encoding: 'utf8' })
