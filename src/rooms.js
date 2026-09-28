@@ -1,6 +1,6 @@
 // 教室查詢頁：選校區、大樓、樓層與時間，看每間教室「上課中」或「沒有排課（到幾點）」；點一間看它的一週課表。
 // 計算都在 lib/rooms.js；大樓名稱來自 lib/buildings.js（官方表，快取 30 天，抓不到就只顯示代碼）。
-import { buildRoomIndex, roomStatus, noRoomCount, floorsOf, floorLabel, matchRooms, buildingsOf, campusesOf, periodAt, nowPoint, formatMinute } from './lib/rooms.js'
+import { buildRoomIndex, roomStatus, describeStatus, roomRows, noRoomCount, floorsOf, floorLabel, matchRooms, buildingsOf, campusesOf, periodAt, nowPoint, formatMinute } from './lib/rooms.js'
 import { loadBuildings } from './lib/buildings.js'
 import { campusName } from './lib/freeslots.js'
 import { DAY_NAMES } from './lib/periods.js'
@@ -42,14 +42,6 @@ function point() {
   if (state.mode === 'now') return nowPoint(new Date())
   const [h, m] = state.time.split(':').map(Number)
   return { day: state.day, minute: Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 0 }
-}
-
-function describeStatus(status) {
-  if (status.state === 'busy') {
-    const what = status.courses.map((c) => [c.name, c.teacher].filter(Boolean).join('・')).join('／')
-    return { badge: '上課中', text: `${what}・到 ${formatMinute(status.until)}` }
-  }
-  return { badge: '沒有排課', text: status.until == null ? '今天之後沒有排課' : `到 ${formatMinute(status.until)} 前沒有排課` }
 }
 
 // ---------- 控制項 ----------
@@ -117,17 +109,7 @@ function renderList(p) {
     list.replaceChildren(el('p', 'muted', '先選一棟或幾棟大樓。'))
     return
   }
-  const buildingOrder = buildingsOf(index, state.campus).map((b) => b.code)
-  const pool = allRooms().filter((r) => r.campus === state.campus && state.buildings.includes(r.building))
-  const floorOrder = floorsOf(pool)
-  const rows = pool
-    .filter((r) => !state.floors.length || state.floors.includes(r.floor))
-    .map((room) => ({ room, status: roomStatus(room, p.day, p.minute) }))
-    .filter(({ status }) => state.show === 'all' || status.state === state.show)
-    .sort((a, b) =>
-      buildingOrder.indexOf(a.room.building) - buildingOrder.indexOf(b.room.building) ||
-      floorOrder.indexOf(a.room.floor) - floorOrder.indexOf(b.room.floor) ||
-      a.room.code.localeCompare(b.room.code, 'en', { numeric: true }))
+  const rows = roomRows(index, state, p)
   if (!rows.length) {
     list.replaceChildren(el('p', 'muted', '沒有符合的教室。'))
     return
@@ -166,7 +148,7 @@ function weekItems(room) {
   const byCourse = new Map()
   for (const s of room.slots) {
     if (!byCourse.has(s.course)) byCourse.set(s.course, [])
-    byCourse.get(s.course).push({ day: s.day, period: s.period, room: room.code })
+    byCourse.get(s.course).push({ day: s.day, period: s.period })
   }
   return [...byCourse].map(([course, slots]) => ({
     key: `room:${course.id}`, source: 'manual', cosId: course.id, title: course.name, teacher: course.teacher, color: WEEK_COLOR, slots,
@@ -258,8 +240,10 @@ async function init() {
   restore(stored.rooms)
   const buildings = await loadBuildings()
   rebuild(stored.courseData, buildings)
+  // 同一節好幾門課時全部寫出來：每一節都寫課名、課名可以換行（樣式在 rooms.css）
   timetable = createTimetable($('#room-week'), {
     note: $('#room-note'),
+    repeatNames: true,
     onOpen: (item) => {
       const url = courseOutlineUrl(semester, item.cosId)
       if (url) window.open(url, '_blank', 'noreferrer')

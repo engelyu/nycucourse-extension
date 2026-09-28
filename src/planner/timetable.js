@@ -6,7 +6,8 @@ import { describeKeys } from '../lib/freeslots.js'
 
 const el = (tag, className, text) => Object.assign(document.createElement(tag), { className, ...(text === undefined ? {} : { textContent: text }) })
 
-export function createTimetable(container, { note, onOpen }) {
+// repeatNames：接續的節次也寫課名（教室查詢用）；預設只有第一節寫、後面是細色條
+export function createTimetable(container, { note, onOpen, repeatNames = false }) {
   let week = stackWeek([])
 
   container.addEventListener('mouseover', (e) => {
@@ -19,12 +20,13 @@ export function createTimetable(container, { note, onOpen }) {
   })
 
   function courseButton(entry) {
-    const b = el('button', `tt-course${entry.first ? '' : ' cont'}`)
+    const named = entry.first || repeatNames
+    const b = el('button', `tt-course${named ? '' : ' cont'}`)
     b.type = 'button'
     b.dataset.item = entry.key
     b.dataset.kind = entry.kind
     b.style.setProperty('--kind', entry.color)
-    if (entry.first) {
+    if (named) {
       b.title = [entry.item.title, entry.room].filter(Boolean).join('・')
       b.append(el('span', 'mark', entry.mark), el('span', 'name', entry.item.title), el('span', 'room', entry.room))
     } else {

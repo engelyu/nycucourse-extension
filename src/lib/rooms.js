@@ -110,6 +110,31 @@ export function roomStatus(room, day, minute) {
   return { state: 'free', courses: [], until: later.length ? Math.min(...later) : null }
 }
 
+// 列表上一間教室的狀態文字：上課中就把這個時間的每一門課都寫出來（合開、同時段兩門課都要列）
+export function describeStatus(status) {
+  if (status.state === 'busy') {
+    const text = status.courses.map((c) => [c.name, c.teacher].filter(Boolean).join('・')).join('／')
+    return { badge: '上課中', courses: status.courses, text: `${text}・到 ${formatMinute(status.until)}` }
+  }
+  return { badge: '沒有排課', courses: [], text: status.until == null ? '今天之後沒有排課' : `到 ${formatMinute(status.until)} 前沒有排課` }
+}
+
+// 教室列表（教室查詢頁與 popup 共用）：校區、大樓、樓層（空陣列＝全部）與顯示（all／free／busy）篩選，
+// 照大樓（buildingsOf 的順序）、樓層、代碼排序
+export function roomRows(index, { campus, buildings, floors = [], show = 'all' }, { day, minute }) {
+  const buildingOrder = buildingsOf(index, campus).map((b) => b.code)
+  const pool = [...index.rooms.values()].filter((r) => r.campus === campus && buildings.includes(r.building))
+  const floorOrder = floorsOf(pool)
+  return pool
+    .filter((r) => !floors.length || floors.includes(r.floor))
+    .map((room) => ({ room, status: roomStatus(room, day, minute) }))
+    .filter(({ status }) => show === 'all' || status.state === show)
+    .sort((a, b) =>
+      buildingOrder.indexOf(a.room.building) - buildingOrder.indexOf(b.room.building) ||
+      floorOrder.indexOf(a.room.floor) - floorOrder.indexOf(b.room.floor) ||
+      a.room.code.localeCompare(b.room.code, 'en', { numeric: true }))
+}
+
 export function noRoomCount(index, day, minute) {
   const now = roomSessions({ slots: (index && index.noRoom) || [] }).filter((s) => s.day === day && s.start <= minute && minute < s.end)
   return new Set(now.map((s) => s.course)).size
