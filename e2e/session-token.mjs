@@ -47,6 +47,8 @@ await ctx.route('https://cos.nycu.edu.tw/**', async (route) => {
 let [sw] = ctx.serviceWorkers()
 if (!sw) sw = await ctx.waitForEvent('serviceworker')
 const extId = new URL(sw.url()).host
+// 每個介面都要先有課程資料才能用（沒有會被擋住）
+await sw.evaluate((courseData) => chrome.storage.local.set({ courseData }), { semester: '1151', updatedAt: Date.now(), courses: [{ id: '100001', name: '線性代數', ename: '', teacher: '王老師', time: 'M34-SC101[GF]', credit: '3', type: '必修', dep: '數學系', deps: ['數學系'], limit: '50', brief: '', menus: [] }] })
 
 // 先開的分頁：沒登入（sessionStorage 空），localStorage 有改版前的過期權杖
 const loggedOut = await ctx.newPage()

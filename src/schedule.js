@@ -2,6 +2,8 @@ import { manualItem, slotsFromTimeRange, slotsFromPeriodRange, itemUrl, buildWee
 import { PERIODS, DAY_NAMES, describeSlots } from './lib/periods.js'
 import { wishLabel } from './lib/register.js'
 import { findCosTab } from './cos-tab.js'
+import { createCrawlBar } from './course-data/crawl-bar.js'
+import { mountDataGate } from './course-data/gate.js'
 
 const COS_URL = 'https://cos.nycu.edu.tw/#/emulator'
 const $ = (sel) => document.querySelector(sel)
@@ -379,3 +381,6 @@ function init() {
 }
 
 init()
+
+mountDataGate()
+createCrawlBar(document.getElementById('crawl')).load()

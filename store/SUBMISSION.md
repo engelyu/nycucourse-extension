@@ -89,7 +89,7 @@ This extension helps students of National Yang Ming Chiao Tung University (NYCU)
 
 Features that can be tested without a login:
 1. Click the toolbar icon. The popup shows the user's weekly timetable (empty without a login) and three buttons: 「當期選課 ↗」, 「教室 ↗」, 「編輯課表 ↗」.
-2. Click 「當期選課 ↗」 to open the planner page, then click 「更新課程資料」. The extension downloads the public course timetable from timetable.nycu.edu.tw (about 1–3 minutes).
+2. On first use every page (popup and extension pages) shows 「先下載課程資料」. Click 「下載課程資料」; the extension downloads the public course timetable from timetable.nycu.edu.tw (about 1–3 minutes) and the page opens by itself when done. Later, every page has an 「更新課程資料」 button. Then click 「當期選課 ↗」 to open the planner page.
 3. Type a keyword such as 線性代數 into the search box on the left. On the right, open the 「篩選設定」 tab and click 「全選」, or drag on the weekly grid to select time slots; courses that fit those slots are listed, and can be filtered by campus, category and department.
 4. Click 「教室 ↗」 in the popup to open the classroom page. Pick a building and floor to see which rooms have a class right now, and click a room to see its weekly timetable. It uses the same public course data plus the public classroom code list from timetable.nycu.edu.tw.
 5. Click 「編輯課表 ↗」 to add a personal event; it appears in the popup timetable.

@@ -122,3 +122,20 @@ test('createStateWriter 寫入失敗不會卡住後續寫入', async () => {
   await writer.update({ status: 'done' })
   assert.equal(writes.at(-1).status, 'done')
 })
+
+test('hasCourseData：至少要有一門課才算有資料', async () => {
+  const { hasCourseData } = await import('../src/lib/crawlState.js')
+  assert.equal(hasCourseData(undefined), false)
+  assert.equal(hasCourseData(null), false)
+  assert.equal(hasCourseData({}), false)
+  assert.equal(hasCourseData({ semester: '1151', courses: [] }), false)
+  assert.equal(hasCourseData({ semester: '1151', courses: 'x' }), false)
+  assert.equal(hasCourseData({ semester: '1151', courses: [{ id: '1' }] }), true)
+})
+
+test('describeData：學期、門數、更新時間', async () => {
+  const { describeData } = await import('../src/lib/crawlState.js')
+  assert.equal(describeData(null), '')
+  const at = new Date(2026, 8, 24, 9, 5).getTime()
+  assert.equal(describeData({ semester: '1151', updatedAt: at, courses: [{}, {}] }), '1151 學期 · 2 門 · 9/24 09:05 更新')
+})

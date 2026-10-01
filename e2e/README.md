@@ -23,6 +23,7 @@
 | `planner-scroll.mjs` | 當期選課：寬視窗左右兩欄各自捲動、系所搜尋按 Enter（含注音選字）沒有作用 |
 | `planner-auto.mjs` | 當期選課的自動登記分頁：加入清單、開關與時間、立刻執行一次（選課結束時不送出）、移除、記住分頁 |
 | `planner-attribution.mjs` | 查詢裡的變更採計：選修改核心、加不回去時還原、已登記的課不提供 |
+| `data-gate.mjs` | 沒有課程資料時 popup、當期選課、教室查詢、編輯課表都先擋住；下載失敗的說明與重按、完成後自動解除、每個頁面都有「更新課程資料」 |
 | `pages.mjs` | popup 頁首三個按鈕、編輯課表頁、選課頁已拿掉、當期選課三個分頁 |
 | `store-shots.mjs` | 不是測試：拍商店截圖（真實課程資料＋假選課網），輸出 `store/images/screenshot-1..5.png`。需要 `~/nycucourse-data/timetable-history/1151.json` 與 `classroom-code-*.json`，可用環境變數 `COURSES`、`BUILDINGS` 指定 |
 | `session-token.mjs` | 選課網權杖在 sessionStorage、開好幾個選課網分頁時挑已登入的；選課結束後改讀本學期選課結果 |

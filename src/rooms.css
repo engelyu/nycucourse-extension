@@ -40,3 +40,7 @@
 /* 週課表：同一節好幾門課時每一門都完整寫出課名（換行，不截字）；只套在教室查詢，當期選課的課表預覽不變 */
 #room-week .tt-course { overflow: visible; }
 #room-week .tt-course .name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* 標題旁的「更新課程資料」 */
+.rooms-title { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.rooms-title h1 { margin: 0; }

@@ -75,3 +75,17 @@ export function createStateWriter(write, now = () => Date.now()) {
     },
   }
 }
+
+// 本機有沒有可用的課程資料：每個頁面都要先有資料才能開始用
+export function hasCourseData(courseData) {
+  return Boolean(courseData && Array.isArray(courseData.courses) && courseData.courses.length > 0)
+}
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+// 頁面上顯示的資料狀態：「1151 學期 · 3658 門 · 9/24 09:05 更新」
+export function describeData(courseData) {
+  if (!hasCourseData(courseData)) return ''
+  const d = new Date(courseData.updatedAt)
+  return `${courseData.semester} 學期 · ${courseData.courses.length} 門 · ${d.getMonth() + 1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())} 更新`
+}

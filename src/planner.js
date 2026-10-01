@@ -12,7 +12,8 @@ import { createDeptPicker } from './planner/dept-picker.js'
 import { renderResults as renderResultList } from './planner/results.js'
 import { createPaneTabs } from './planner/pane-tabs.js'
 import { createSplitView } from './planner/split-view.js'
-import { createCrawlBar } from './planner/crawl-bar.js'
+import { createCrawlBar } from './course-data/crawl-bar.js'
+import { mountDataGate } from './course-data/gate.js'
 import { createTimetable } from './planner/timetable.js'
 import { createCourseDetail } from './planner/course-detail.js'
 import { createAutoRegister } from './planner/auto-register.js'
@@ -646,6 +647,7 @@ async function init() {
     },
   })
   auto.load()
+  mountDataGate()
   const crawl = createCrawlBar($('#crawl'))
   crawl.load()
   askCos({ type: 'semester' }).then((reply) => crawl.setCosSemester(reply && reply.ok ? reply.semester : null))

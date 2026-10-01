@@ -1,11 +1,17 @@
-// 更新課程資料：和 popup 以前的「加入預排」tab 同一套（背景程式 crawl:start，進度寫在 storage 的 crawlState）。
-import { describeCrawl } from '../lib/crawlState.js'
+// 更新課程資料：按鈕、資料狀態、進度與錯誤。每個頁面共用同一套（背景程式 crawl:start，進度寫在 storage 的 crawlState）。
+// root 是空的容器，畫面由這裡產生；label 是按鈕文字（擋住頁面的卡片上叫「下載課程資料」）。
+import { describeCrawl, describeData, hasCourseData } from '../lib/crawlState.js'
 
-const pad = (n) => String(n).padStart(2, '0')
-const formatTime = (ms) => {
-  const d = new Date(ms)
-  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+const MARKUP = `
+  <div class="data-bar"><button class="btn-crawl" type="button"></button><span class="data-status muted"></span></div>
+  <section class="crawl-progress" role="status" aria-live="polite" hidden>
+    <div class="crawl-row"><span class="crawl-title"></span><span class="crawl-elapsed"></span></div>
+    <div class="crawl-track"><div class="crawl-bar"></div></div>
+    <div class="crawl-row"><span class="crawl-detail"></span><span class="crawl-percent"></span></div>
+    <p class="crawl-hint"></p>
+  </section>
+  <p class="crawl-error hint" hidden></p>
+  <p class="semester-warning hint" role="alert" hidden></p>`
 
 function showHint(el, text, kind = '') {
   el.textContent = text
@@ -14,7 +20,9 @@ function showHint(el, text, kind = '') {
   el.hidden = !text
 }
 
-export function createCrawlBar(root) {
+export function createCrawlBar(root, { label = '更新課程資料' } = {}) {
+  root.classList.add('crawl')
+  root.innerHTML = MARKUP
   const $ = (sel) => root.querySelector(sel)
   let courseData = null
   let crawlState = null
@@ -40,19 +48,18 @@ export function createCrawlBar(root) {
   const render = () => {
     const isRunning = Boolean(crawlState && crawlState.status === 'running')
     const running = renderProgress()
-    const hasData = Boolean(courseData && courseData.courses && courseData.courses.length)
+    const hasData = hasCourseData(courseData)
     const btn = $('.btn-crawl')
     btn.disabled = running
-    btn.textContent = running ? '更新中…' : '更新課程資料'
-    $('.data-status').textContent = hasData
-      ? `${courseData.semester} 學期 · ${courseData.courses.length} 門 · ${formatTime(courseData.updatedAt)} 更新`
-      : running ? '尚未有課程資料' : '尚未下載課程資料'
+    const verb = hasData ? '更新' : '下載'
+    btn.textContent = running ? `${verb}中…` : label
+    $('.data-status').textContent = hasData ? describeData(courseData) : running ? '' : '尚未下載課程資料'
 
     const err = $('.crawl-error')
     if (crawlState && crawlState.status === 'error') {
-      showHint(err, `更新失敗：${crawlState.error || '未知錯誤'}${hasData ? '（已保留原本的課程資料）' : ''}`, 'error')
+      showHint(err, `${verb}失敗：${crawlState.error || '未知錯誤'}${hasData ? '（已保留原本的課程資料）' : '。請再按一次。'}`, 'error')
     } else if (isRunning && !running) {
-      showHint(err, '上次更新中斷，請重新按更新。', 'error')
+      showHint(err, `上次${verb}中斷，請再按一次。`, 'error')
     } else if (crawlState && crawlState.status === 'done' && crawlState.failed > 0 && !running) {
       showHint(err, `有 ${crawlState.failed} 個系所沒抓到，課程可能不完整，稍後可以再更新一次。`, 'warn')
     } else if (startError && !running) {
@@ -83,7 +90,7 @@ export function createCrawlBar(root) {
       await chrome.runtime.sendMessage({ type: 'crawl:start' })
     } catch (err) {
       crawlState = previous
-      startError = `無法啟動更新：${err && err.message ? err.message : err}`
+      startError = `無法開始${hasCourseData(courseData) ? '更新' : '下載'}：${err && err.message ? err.message : err}`
       render()
     }
   }

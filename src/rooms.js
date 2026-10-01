@@ -6,6 +6,8 @@ import { campusName } from './lib/freeslots.js'
 import { DAY_NAMES } from './lib/periods.js'
 import { courseOutlineUrl } from './lib/links.js'
 import { createTimetable } from './planner/timetable.js'
+import { createCrawlBar } from './course-data/crawl-bar.js'
+import { mountDataGate } from './course-data/gate.js'
 
 const $ = (sel) => document.querySelector(sel)
 const el = (tag, className, text) => Object.assign(document.createElement(tag), { className, ...(text === undefined ? {} : { textContent: text }) })
@@ -102,7 +104,7 @@ function renderControls(p) {
 function renderList(p) {
   const list = $('#room-list')
   if (!hasCourses) {
-    list.replaceChildren(el('p', 'muted', '還沒有課程資料，請先到「當期選課」按「更新課程資料」。'))
+    list.replaceChildren(el('p', 'muted', '還沒有課程資料，請按上方「更新課程資料」。'))
     return
   }
   if (!state.buildings.length) {
@@ -236,6 +238,8 @@ function rebuild(courseData, buildings) {
 }
 
 async function init() {
+  mountDataGate()
+  createCrawlBar($('#crawl')).load()
   const stored = await chrome.storage.local.get(['rooms', 'courseData'])
   restore(stored.rooms)
   const buildings = await loadBuildings()

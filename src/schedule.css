@@ -166,3 +166,6 @@ dialog input[type="text"], dialog input[type="url"] {
 .actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .actions .spacer { flex: 1; }
 button.danger { color: var(--error); }
+
+/* 更新課程資料 */
+.schedule-crawl { margin: 8px 0; }

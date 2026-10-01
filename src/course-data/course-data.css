@@ -1,0 +1,38 @@
+/* 課程資料：每個頁面共用的「更新課程資料」與沒有資料時擋住頁面的卡片（src/course-data/） */
+.crawl { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.data-bar { display: flex; gap: 10px; align-items: center; }
+.crawl-progress { padding: 8px 10px; border: 1px solid var(--line, rgba(127,127,127,.25)); border-radius: 8px; font-size: 12px; min-width: 320px; }
+.crawl-progress[hidden] { display: none; }
+.crawl-row { display: flex; justify-content: space-between; gap: 8px; color: var(--muted, #6b7280); }
+.crawl-title { font-weight: 600; color: CanvasText; }
+.crawl-elapsed { font-variant-numeric: tabular-nums; }
+.crawl-track { position: relative; height: 6px; margin: 6px 0; border-radius: 3px; background: var(--line, rgba(127,127,127,.25)); overflow: hidden; }
+.crawl-bar { height: 100%; width: 0; border-radius: 3px; background: var(--accent, #2563eb); transition: width .3s ease; }
+.crawl-track.indeterminate .crawl-bar { position: absolute; width: 35%; animation: crawl-slide 1.2s ease-in-out infinite; }
+@keyframes crawl-slide { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .crawl-track.indeterminate .crawl-bar { animation: none; width: 100%; opacity: .45; }
+}
+.crawl-hint { margin: 4px 0 0; color: var(--muted, #6b7280); }
+.crawl-hint.slow, .hint.warn { color: #b45309; }
+.hint { margin: 0; font-size: 12px; }
+.hint[hidden] { display: none; }
+.hint.error { color: var(--error, #c62828); }
+@media (prefers-color-scheme: dark) {
+  .crawl-hint.slow, .hint.warn { color: #f59e0b; }
+}
+
+
+.data-status { color: var(--muted, #6b7280); }
+
+/* 沒有課程資料時蓋住整個頁面 */
+.data-gate { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: Canvas; color: CanvasText; overflow: auto; }
+.data-gate[hidden] { display: none; }
+.data-gate-card { box-sizing: border-box; width: min(460px, 100%); padding: 20px 22px; border: 1px solid var(--line, rgba(127,127,127,.25)); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+.data-gate-card h2 { margin: 0 0 8px; font-size: 18px; }
+.data-gate-card p { margin: 0 0 14px; }
+.data-gate-card .data-bar { flex-wrap: wrap; }
+.data-gate-card .btn-crawl { padding: 8px 18px; font-size: 15px; font-weight: 600; }
+.data-gate-card .crawl-progress { min-width: 0; margin-top: 10px; }
+.data-gate-card .crawl-hint, .data-gate-card .hint { margin: 6px 0 0; }
+body.needs-course-data { overflow: hidden; min-height: 420px; }

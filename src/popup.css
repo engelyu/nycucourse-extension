@@ -148,3 +148,8 @@ main[hidden] { display: none; }
 .qr-row .code { min-width: 64px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .qr-row .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .qr-notice { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+
+/* 最下面的「更新課程資料」：小字，進度條展開在這裡 */
+.popup-crawl { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; }
+.popup-crawl .btn-crawl { padding: 2px 8px; font-size: 12px; }
+.popup-crawl .crawl-progress { min-width: 0; }

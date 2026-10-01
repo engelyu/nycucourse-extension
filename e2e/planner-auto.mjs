@@ -36,7 +36,7 @@ await ctx.route('https://cos.nycu.edu.tw/**', async (route) => {
 let [sw] = ctx.serviceWorkers()
 if (!sw) sw = await ctx.waitForEvent('serviceworker')
 const extId = new URL(sw.url()).host
-await sw.evaluate((schedule) => chrome.storage.local.set({ schedule, courseData: { semester: '1151', updatedAt: Date.now(), courses: [] } }), {
+await sw.evaluate((schedule) => chrome.storage.local.set({ schedule, courseData: { semester: '1151', updatedAt: Date.now(), courses: [{ id: '100001', name: '線性代數', ename: '', teacher: '王老師', time: 'M34-SC101[GF]', credit: '3', type: '必修', dep: '數學系', deps: ['數學系'], limit: '50', brief: '', menus: [] }] } }), {
   sources: { registered: { semester: '1151', updatedAt: Date.now(), courses: [] }, preregist: { semester: '1151', updatedAt: Date.now(), courses: PREREG } },
   manual: [],
   overrides: {},
